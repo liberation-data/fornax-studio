@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+.DS_Store
+dist/
+# Built from the Kiln checkout by npm run server:build
+/server/
+# Written by next dev
+AGENTS.md

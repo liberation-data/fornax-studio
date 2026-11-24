@@ -1,0 +1,89 @@
+{
+  "name": "kiln-studio",
+  "productName": "Kiln Studio",
+  "version": "0.1.0",
+  "main": "main.cjs",
+  "private": true,
+  "description": "Try models with Kiln: chat, images and songs, on your GPU, in one JVM.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "next dev --port 5190",
+    "build": "next build && mkdir -p .next/standalone/.next/static && cp -R .next/static/. .next/standalone/.next/static/ && (test ! -d public || cp -R public/. .next/standalone/public/)",
+    "start": "PORT=${PORT:-5190} HOSTNAME=localhost node .next/standalone/server.js",
+    "typecheck": "tsc --noEmit",
+    "server:build": "scripts/build-server.sh",
+    "server": "scripts/run-server.sh",
+    "electron": "npm run build && electron .",
+    "electron:dev": "ELECTRON_DEV=1 electron .",
+    "electron:watch": "concurrently \"npm run server\" \"npm run dev\" \"ELECTRON_DEV=1 ELECTRON_DEVTOOLS=1 electron .\"",
+    "package:linux": "npm run build && electron-builder --linux --dir",
+    "package:linux:installers": "npm run build && electron-builder --linux",
+    "package:mac": "npm run build && electron-builder --mac --dir",
+    "test": "vitest run --exclude '**/node_modules/**' --exclude '.next/**'"
+  },
+  "dependencies": {
+    "@liberation-data/desk": "^0.39.2",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.1",
+    "@types/react-dom": "^19.3.0",
+    "concurrently": "^10.0.7",
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  },
+  "build": {
+    "appId": "org.liberationdata.kiln.studio",
+    "productName": "Kiln Studio",
+    "icon": "build/icon.png",
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
+    "asar": false,
+    "linux": {
+      "target": [
+        "deb",
+        "rpm"
+      ],
+      "category": "Development",
+      "artifactName": "kiln-studio-linux-${arch}.${ext}",
+      "maintainer": "Jasper Blues <jasper@liberation-data.com>"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "artifactName": "kiln-studio-mac-${arch}.${ext}",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "files": [
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
+      "main.cjs",
+      "build/icon.png",
+      "preload.cjs",
+      "server-start.cjs",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "kiln-studio-server.jar",
+          "native/**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
