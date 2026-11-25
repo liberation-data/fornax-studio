@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "main": "main.cjs",
   "private": true,
-  "description": "Try models with Kiln: chat, images and songs, on your GPU, in one JVM.",
+  "description": "Try models with Kiln: chat, images, songs and video, on your GPU, in one JVM.",
   "license": "Apache-2.0",
   "scripts": {
     "dev": "next dev --port 5190",

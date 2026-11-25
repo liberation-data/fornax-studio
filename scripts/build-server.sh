@@ -17,8 +17,8 @@ native="${KILN_NATIVE:-$kiln/build/native/$os-$arch-${KILN_BACKEND:-vulkan}}"
 rm -rf "$here/server/native"
 mkdir -p "$here/server/native"
 cp "$kiln/kiln-studio-server/build/libs/kiln-studio-server.jar" "$here/server/"
-# Only the engines the studio runs (native/build.sh vulkan llama sd acestep builds just these): not yue2.
-libs=(libkiln_llama libstable-diffusion libkiln_acestep)
+# Every engine the studio runs (native/build.sh vulkan llama sd acestep yue2 builds just these).
+libs=(libkiln_llama libstable-diffusion libkiln_acestep libkiln_yue2)
 missing=()
 for lib in "${libs[@]}"; do
   found=("$native/$lib".so "$native/$lib".dylib)

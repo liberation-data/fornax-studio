@@ -1,8 +1,8 @@
 # Kiln Studio
 
 Try models with Kiln: chat with a GGUF model and watch the tokens per second,
-watch it call tools, make an image or a song, and see what is loaded and how much memory it holds. Kiln runs the
-engines (llama.cpp, stable-diffusion.cpp, acestep.cpp) inside one JVM, through Java's FFM API; Kiln Studio is the
+watch it call tools, make an image, a song or a video clip, and see what is loaded and how much memory it holds. Kiln
+runs the engines (llama.cpp, stable-diffusion.cpp, acestep.cpp, yue2.cpp) inside one JVM, through Java's FFM API; Kiln Studio is the
 desktop app around it, the sibling of [Drivine Studio](https://github.com/liberation-data/drivine-studio) and built the
 same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@liberation-data/desk).
 
@@ -10,15 +10,22 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
 
 ## Windows
 
-- **Models**: what in the Hugging Face cache Kiln can run (every GGUF chat model, and the image and song presets whose
-  files are all there), which are loaded in Kiln's `ModelPool`, the memory they hold against its budget, and the GPU's
+- **Models**: what in the Hugging Face cache Kiln can run (every GGUF chat model, and the image, song and video presets
+  whose files are all there), which are loaded in Kiln's `ModelPool`, the memory they hold against its budget, and the GPU's
   own memory use. Load and unload from here.
 - **Chat**: a conversation streamed token by token, with tokens per second, time to the first token and token counts.
   **Thinking** shows Qwen3's reasoning (off sends Qwen3's `/no_think`). **Tools** offers the model a clock and a
   calculator through `LlamaModel.chatJson`: each call it makes is run by the backend and its answer handed back.
 - **Image**: a prompt, size, steps, guidance and seed in; the image out, with the steps as they go and their timings.
 - **Song**: a style, lyrics, length, BPM and key in; a 48 kHz song out, played in the window, with the time it took and
-  the request as ACE-Step resolved it.
+  the request as the engine resolved it. Two engines: ACE-Step 1.5, and YuE2 (style, lyrics and length only; it also
+  shows the ABC score it composes first). YuE2's weights are CC BY-NC 4.0, no commercial use, which the window says
+  when it is chosen.
+- **Video**: LTX-2.5 through stable-diffusion.cpp: a prompt, an optional first frame, size, frames, fps, and sound on or
+  off in; an .mp4 out, played in the window. Two-stage (the default) is Kiln's VideoClip recipe: a draft, the x2 latent
+  upscaler, a refine at twice the size. Progress shows each stage's steps. A clip takes minutes, and stable-diffusion.cpp
+  can't be stopped mid-render: Stop waiting leaves the backend to finish it. Needs `ffmpeg` (on the `PATH`, in
+  `/opt/homebrew/bin` or `/usr/local/bin`, or `KILN_STUDIO_FFMPEG`) to make the .mp4.
 
 ## How it fits together
 
@@ -27,7 +34,7 @@ Electron (main.cjs)
  ├─ starts Kiln's backend:  java -jar server/kiln-studio-server.jar   (127.0.0.1:5191, KILN_STUDIO_PORT)
  ├─ starts the studio's Next.js server in Electron's own Node        (localhost:5190, PORT)
  └─ opens a window on it
-page ──/api/*──▶ Next.js (src/app/api/[...path]) ──▶ kiln-studio-server ──FFM──▶ llama.cpp · stable-diffusion.cpp · acestep.cpp
+page ──/api/*──▶ Next.js (src/app/api/[...path]) ──▶ kiln-studio-server ──FFM──▶ llama.cpp · stable-diffusion.cpp · acestep.cpp · yue2.cpp
 ```
 
 The backend is `kiln-studio-server`, a module of the Kiln repository: JDK-only HTTP (`com.sun.net.httpserver`), replies
@@ -59,10 +66,12 @@ Settings, from the environment:
 | Variable | |
 |---|---|
 | `HF_HUB_CACHE` / `HF_HOME` | where the models are (default `~/.cache/huggingface/hub`) |
-| `KILN_STUDIO_STUB` | kinds of work answered by a stub that loads nothing, as `image,song` (or `chat`): for trying the app without the GPU |
+| `KILN_STUDIO_STUB` | kinds of work answered by a stub that loads nothing, as `image,song,video` (or `chat`): for trying the app without the GPU |
+| `KILN_STUDIO_FFMPEG` | the ffmpeg that makes a video's .mp4 (else the `PATH`'s) |
+| `GGML_VK_MAX_NODES_PER_SUBMIT` | Vulkan only: 8 unless set, so an LTX decode stays under amdgpu's compute timeout |
 | `KILN_STUDIO_BUDGET_GB` | the pool's memory budget (24) |
 | `KILN_STUDIO_IDLE_MINUTES` | unload a model idle this long (15) |
-| `KILN_STUDIO_HOME` | where images and songs are kept (`~/.kiln-studio`, in `outputs/`) |
+| `KILN_STUDIO_HOME` | where images, songs and videos are kept (`~/.kiln-studio`, in `outputs/`) |
 | `KILN_HOME`, `KILN_NATIVE`, `KILN_BACKEND` | for `npm run server:build`: the Kiln checkout, and which native libraries to ship |
 | `KILN_STUDIO_JAR`, `KILN_LIBRARY_PATH`, `KILN_STUDIO_JAVA` | to run another backend jar, libraries or Java |
 | `PORT`, `KILN_STUDIO_PORT` | the page's and the backend's ports (5190, 5191) |
@@ -77,8 +86,8 @@ with only the modules the jar uses (about 60 MB); the app runs it, `server/jre/b
 GitHub Actions builds what a release ships, from the Kiln commit in `kiln.ref` (bump it to take a newer Kiln):
 
 - `kiln-backend.yml`, called by the two below once per platform: checks out Kiln, builds the engines the studio runs
-  (`native/build.sh vulkan|metal llama sd acestep`, cached), the backend jar and its jlink'd Java runtime, and checks
-  that the backend starts on it.
+  (`native/build.sh vulkan|metal llama sd acestep yue2`, cached), the backend jar and its jlink'd Java runtime, and
+  checks that all four libraries are there and that the backend starts on it.
 - `linux-build.yml`: a `.deb` and an `.rpm`, x64, Vulkan. They depend on the Vulkan loader and OpenMP; the GPU needs a
   Vulkan driver.
 - `macos-signed.yml`: a `.dmg` and a `.zip` for Apple silicon and for Intel, Metal, signed with a Developer ID and

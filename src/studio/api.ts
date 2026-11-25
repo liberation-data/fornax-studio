@@ -1,6 +1,6 @@
 /** What the studio's page asks of Kiln's backend, through the studio's own server (/api/* is passed on as it is). */
 
-export type Kind = 'chat' | 'image' | 'song'
+export type Kind = 'chat' | 'image' | 'song' | 'video'
 
 export interface Part {
   role: string
@@ -25,6 +25,8 @@ export interface Model {
   loadSeconds: number | null
   /** Answered by a stub in this backend: nothing is loaded and nothing real is made. */
   stub: boolean
+  /** Where the weights' license limits what may be done with what they make (YuE2's CC BY-NC 4.0), in words. */
+  license: string | null
 }
 
 export interface GpuMemory {
@@ -61,7 +63,7 @@ export const unloadModel = (id: string) =>
 // ---- what the streams say ----
 
 export interface LoadStatus {
-  state: 'loading' | 'loaded' | 'generating'
+  state: 'loading' | 'loaded' | 'generating' | 'encoding'
   model?: string
   sizeBytes?: number
   loadSeconds?: number
@@ -116,5 +118,34 @@ export interface SongDone {
   audioSeconds: number
   realtime: number
   request: Record<string, unknown>
+  /** The ABC score YuE2 composed before it sang (null for ACE-Step). */
+  score: string | null
+  license: string | null
+  stub: boolean
+}
+
+/** A sampling step of a video: of the draft (stage 1) or the refine (stage 2) in the two-stage recipe. */
+export interface VideoProgress {
+  step: number
+  steps: number
+  secondsPerStep: number
+  stage: number
+  stages: number
+}
+
+export interface VideoDone {
+  url: string
+  file: string
+  width: number
+  height: number
+  frames: number
+  fps: number
+  videoSeconds: number
+  audio: boolean
+  steps: number
+  cfg: number
+  seed: number
+  twoStage: boolean
+  seconds: number
   stub: boolean
 }
