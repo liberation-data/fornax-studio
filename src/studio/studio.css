@@ -100,3 +100,14 @@ html, body { height: 100%; margin: 0; }
 .studio-song { display: flex; flex-direction: column; gap: var(--desk-space-2); padding-bottom: var(--desk-space-4); border-bottom: 1px solid var(--desk-rule); }
 .studio-song audio { width: 100%; }
 .studio-song p { margin: 0; }
+
+/*
+ * The (i) sits on the far side from the window controls: the end of the bar on a Mac (desk already
+ * does that), the start on GNOME and Windows. desk's base rule gives it margin-left: auto for the Mac
+ * look, which on GNOME combines with its margin-right: auto and centres it beside the title.
+ * Remove once desk scopes that rule to the Mac look.
+ */
+[data-look="gnome"] .desk-titlebar > .desk-popover-anchor:has(> .desk-window-info),
+[data-look="windows"] .desk-titlebar > .desk-popover-anchor:has(> .desk-window-info) {
+  margin-left: 0;
+}
