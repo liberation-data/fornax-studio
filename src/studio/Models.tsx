@@ -8,7 +8,7 @@ import { bytes, seconds } from './format'
 import { licenseName } from './parts'
 import { useStudio } from './state'
 
-const KIND = { chat: 'Chat', image: 'Image', song: 'Song', video: 'Video' } as const
+const KIND = { chat: 'Chat', image: 'Image', song: 'Song', video: 'Video', vision: 'Vision' } as const
 
 /** A share of a whole, as a bar and in words. */
 function Meter({ label, used, total }: { label: string; used: number | null; total: number | null }) {

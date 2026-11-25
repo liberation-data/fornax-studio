@@ -1,6 +1,6 @@
 /** What the studio's page asks of Kiln's backend, through the studio's own server (/api/* is passed on as it is). */
 
-export type Kind = 'chat' | 'image' | 'song' | 'video'
+export type Kind = 'chat' | 'image' | 'song' | 'video' | 'vision'
 
 export interface Part {
   role: string
@@ -17,7 +17,7 @@ export interface Model {
   available: boolean
   sizeBytes: number
   parts: Part[]
-  defaults: Record<string, number | string>
+  defaults: Record<string, number | string | boolean>
   loaded: boolean
   inUse: boolean
   loading: boolean
@@ -63,7 +63,8 @@ export const unloadModel = (id: string) =>
 // ---- what the streams say ----
 
 export interface LoadStatus {
-  state: 'loading' | 'loaded' | 'generating' | 'encoding'
+  /** structuring: an OCR model has read the image, and another model now fills the schema from its text. */
+  state: 'loading' | 'loaded' | 'generating' | 'encoding' | 'structuring'
   model?: string
   sizeBytes?: number
   loadSeconds?: number
@@ -147,5 +148,20 @@ export interface VideoDone {
   seed: number
   twoStage: boolean
   seconds: number
+  stub: boolean
+}
+
+export interface InspectDone extends ChatDone {
+  text: string
+  /** The reply parsed, when a schema was asked for and the reply is whole. */
+  json: unknown
+  finishReason: string | null
+  /** The size of the image the model saw (scaled to 1280 on its longest side). */
+  width: number
+  height: number
+  /** What an OCR model read, when another model filled the schema from it; and how long the reading took. */
+  read: string | null
+  readSeconds: number | null
+  filledBy: string | null
   stub: boolean
 }

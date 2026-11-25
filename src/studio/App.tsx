@@ -9,6 +9,7 @@ import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { Chat } from './Chat'
 import { ImageWindow } from './Image'
+import { InspectWindow } from './Inspect'
 import { Models } from './Models'
 import { Song } from './Song'
 import { VideoWindow } from './Video'
@@ -17,7 +18,7 @@ import { StudioProvider, useStudio } from './state'
 
 const desk = createDesk()
 
-const TITLES: Record<string, string> = { models: 'Models', chat: 'Chat', image: 'Image', song: 'Song', video: 'Video' }
+const TITLES: Record<string, string> = { models: 'Models', chat: 'Chat', image: 'Image', song: 'Song', video: 'Video', inspect: 'Inspect' }
 const title = (id: string) => TITLES[id] ?? id
 
 const LIMITS: Record<string, WindowLimits> = {
@@ -26,6 +27,7 @@ const LIMITS: Record<string, WindowLimits> = {
   image: { minWidth: 720, minHeight: 480 },
   song: { minWidth: 720, minHeight: 480 },
   video: { minWidth: 760, minHeight: 520 },
+  inspect: { minWidth: 860, minHeight: 520 },
 }
 
 function infoOf(id: string): ReactNode {
@@ -34,6 +36,7 @@ function infoOf(id: string): ReactNode {
   if (id === 'image') return 'stable-diffusion.cpp through Kiln’s DiffusionModel: FLUX.2 [klein] and Qwen-Image. Each step is reported as it finishes.'
   if (id === 'song') return 'ACE-Step 1.5 through Kiln’s AceStepModel, or YuE2 through its Yue2Model: a style and lyrics in, a 48 kHz stereo song out. YuE2’s weights are CC BY-NC 4.0: no commercial use.'
   if (id === 'video') return 'LTX-2.5 through Kiln’s DiffusionModel.generateVideo, with the two-stage recipe: a draft, the x2 latent upscaler, then a refine. Picture and sound are made together; ffmpeg makes the .mp4.'
+  if (id === 'inspect') return 'A vision language model through Kiln’s LlamaModel, with its mmproj, on llama.cpp’s mtmd: Qwen3-VL, PaddleOCR-VL or MedGemma. An image and a prompt in; an answer out, streamed, as text or as JSON held to a schema with LlamaModel.chatJson.'
   return null
 }
 
@@ -44,6 +47,7 @@ function renderWindow(id: string): ReactNode {
   if (id === 'image') return <ImageWindow />
   if (id === 'song') return <Song />
   if (id === 'video') return <VideoWindow />
+  if (id === 'inspect') return <InspectWindow />
   return null
 }
 
@@ -59,6 +63,7 @@ const DOCK = [
   dockItem({ id: 'image', label: 'Image', description: 'A prompt in, an image out', icon: icon('M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM20 15l-5-5L5 20') }),
   dockItem({ id: 'song', label: 'Song', description: 'A style and lyrics in, a song out', icon: icon('M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z') }),
   dockItem({ id: 'video', label: 'Video', description: 'A prompt in, a clip with sound out', icon: icon('M4 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM16 10l5-3v10l-5-3') }),
+  dockItem({ id: 'inspect', label: 'Inspect', description: 'An image and a question in, an answer or JSON out', icon: icon('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4M8 11h6M11 8v6') }),
 ]
 
 function Studio() {
@@ -73,7 +78,7 @@ function Studio() {
         menuAction('Unload Every Model', () => void fetch('/api/models/unload', { method: 'POST', body: JSON.stringify({ id: '*' }) }).then(refresh)),
       ] },
     { id: 'window', label: 'Window', items: () => [
-        ...['models', 'chat', 'image', 'song', 'video'].map(id => menuAction(title(id), () => desk.open(id))),
+        ...['models', 'chat', 'image', 'song', 'video', 'inspect'].map(id => menuAction(title(id), () => desk.open(id))),
         menuSeparator(),
         menuCommand('Arrange', DeskCommands.arrange, { shortcut: 'mod+alt+a' }),
         menuSeparator(),
@@ -111,13 +116,14 @@ function Studio() {
           empty={
             <div className="studio-hint studio-welcome">
               <h2>Kiln Studio</h2>
-              <p>Open-weight models as plain Java calls, on your GPU, in one JVM. Try a chat model, an image model, a song model or a video model from your Hugging Face cache.</p>
+              <p>Open-weight models as plain Java calls, on your GPU, in one JVM. Try a chat model, an image model, a song model, a video model or a vision model from your Hugging Face cache.</p>
               <div className="studio-hint-actions">
                 <Button onClick={() => desk.open('models')}>Models</Button>
                 <Button onClick={() => desk.open('chat')}>Chat</Button>
                 <Button onClick={() => desk.open('image')}>Image</Button>
                 <Button onClick={() => desk.open('song')}>Song</Button>
                 <Button onClick={() => desk.open('video')}>Video</Button>
+                <Button onClick={() => desk.open('inspect')}>Inspect</Button>
               </div>
             </div>
           }

@@ -110,6 +110,46 @@ html, body { height: 100%; margin: 0; }
 .studio-keyframe { display: block; max-width: 100%; max-height: 120px; margin-top: var(--desk-space-2); border-radius: var(--desk-control-radius); object-fit: contain; }
 .studio-thumb video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 
+/* Inspect */
+.studio-mono { font-family: var(--desk-font-mono); font-size: var(--desk-text-small); }
+.studio-inspect-drop {
+  display: flex; align-items: center; gap: var(--desk-space-3); min-height: 72px; padding: var(--desk-space-2) var(--desk-space-3);
+  border: 1.5px dashed var(--desk-rule); border-radius: var(--desk-radius); color: var(--desk-muted); font-size: var(--desk-text-small);
+  cursor: pointer; transition: border-color 150ms var(--desk-ease), background 150ms var(--desk-ease); overflow-wrap: anywhere;
+}
+.studio-inspect-drop:hover, .studio-inspect-drop:focus-visible { border-color: color-mix(in srgb, var(--studio-ember) 60%, var(--desk-rule)); outline: none; }
+.studio-inspect-drop[data-dragging] { border-color: var(--studio-ember); background: color-mix(in srgb, var(--studio-ember) 12%, transparent); }
+.studio-inspect-drop img { flex: none; width: 64px; height: 64px; object-fit: cover; border-radius: var(--desk-control-radius); }
+.studio-inspect-samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--desk-space-1); margin-top: var(--desk-space-1); }
+.studio-inspect { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.studio-inspect-stage { min-height: 0; min-width: 0; padding: var(--desk-space-4); display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.studio-inspect-frame { position: relative; max-width: 100%; max-height: 100%; }
+.studio-inspect-frame img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: var(--desk-control-radius); box-shadow: var(--desk-shadow); }
+.studio-inspect-box {
+  position: absolute; box-sizing: border-box; border: 3px solid var(--studio-ember); border-radius: 4px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 50%), 0 0 14px color-mix(in srgb, var(--studio-ember) 70%, transparent);
+  animation: studio-box-in 260ms var(--desk-ease);
+}
+.studio-inspect-box span {
+  position: absolute; left: -3px; bottom: 100%; margin-bottom: 4px; padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  background: var(--studio-ember); color: #1b0f08; font-size: var(--desk-text-caption); font-weight: 600;
+}
+@keyframes studio-box-in { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
+.studio-inspect-answer {
+  min-height: 0; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: var(--desk-space-3);
+  padding: var(--desk-space-4); border-inline-start: 1px solid var(--desk-rule);
+}
+.studio-inspect-answer > .desk-tabs { display: flex; flex-direction: column; }
+.studio-inspect-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--desk-font); font-size: var(--desk-text-body); line-height: 1.5; color: var(--desk-ink); }
+.studio-inspect-text.studio-mono { font-family: var(--desk-font-mono); font-size: var(--desk-text-small); }
+.studio-inspect-prose p { margin: 0; }
+.studio-inspect-bullet { position: relative; padding-inline-start: 1.1em; }
+.studio-inspect-bullet::before { content: '•'; position: absolute; inset-inline-start: 0.2em; color: var(--studio-ember); }
+.studio-inspect-gap { height: 0.6em; }
+.studio-inspect-tables { display: flex; flex-direction: column; gap: var(--desk-space-4); padding-top: var(--desk-space-3); }
+.studio-inspect-table h3 { margin: 0 0 var(--desk-space-2); font-size: var(--desk-text-body); font-weight: 600; }
+.studio-inspect-value { font-variant-numeric: tabular-nums; font-weight: 500; }
+
 /*
  * The (i) sits on the far side from the window controls: the end of the bar on a Mac (desk already
  * does that), the start on GNOME and Windows. desk's base rule gives it margin-left: auto for the Mac

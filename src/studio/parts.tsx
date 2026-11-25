@@ -80,7 +80,7 @@ export function StubNotice({ kind }: { kind: Kind }) {
   if (!status?.stubs.includes(kind)) return null
   return (
     <p className="studio-stub" role="note">
-      <strong>Stub backend.</strong> {kind === 'image' ? 'Images' : kind === 'song' ? 'Songs' : kind === 'video' ? 'Videos' : 'Replies'} here are placeholders
+      <strong>Stub backend.</strong> {kind === 'image' ? 'Images' : kind === 'song' ? 'Songs' : kind === 'video' ? 'Videos' : kind === 'vision' ? 'Answers' : 'Replies'} here are placeholders
       made without loading the model (KILN_STUDIO_STUB={status.stubs.join(',')}). The request is the real one.
     </p>
   )

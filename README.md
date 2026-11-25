@@ -1,7 +1,8 @@
 # Kiln Studio
 
 Try models with Kiln: chat with a GGUF model and watch the tokens per second,
-watch it call tools, make an image, a song or a video clip, and see what is loaded and how much memory it holds. Kiln
+watch it call tools, make an image, a song or a video clip, ask a vision model about a picture, and see what is loaded
+and how much memory it holds. Kiln
 runs the engines (llama.cpp, stable-diffusion.cpp, acestep.cpp, yue2.cpp) inside one JVM, through Java's FFM API; Kiln Studio is the
 desktop app around it, the sibling of [Drivine Studio](https://github.com/liberation-data/drivine-studio) and built the
 same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@liberation-data/desk).
@@ -26,6 +27,15 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
   upscaler, a refine at twice the size. Progress shows each stage's steps. A clip takes minutes, and stable-diffusion.cpp
   can't be stopped mid-render: Stop waiting leaves the backend to finish it. Needs `ffmpeg` (on the `PATH`, in
   `/opt/homebrew/bin` or `/usr/local/bin`, or `KILN_STUDIO_FFMPEG`) to make the .mp4.
+- **Inspect**: an image (dropped on, chosen, or one of the samples) and a prompt in; a vision model's answer out,
+  streamed with tokens per second, as free text or as JSON held to a schema (`LlamaModel.chatJson` with images, through
+  llama.cpp's mtmd). Three models: Qwen3-VL 4B (the default), PaddleOCR-VL 1.6 and MedGemma 1.5 4B. Three presets fill
+  the prompt and schema: **Read an invoice** (vendor, number, date, line items and totals, shown as JSON and as tables),
+  **Find defects** (boxes as JSON, drawn over the image) and **Describe for review** (free text, with MedGemma: an aid
+  for a clinician's review, not a diagnosis). PaddleOCR-VL takes task prompts (`OCR:`); given a schema, it reads the
+  text and Qwen3-VL fills the schema from it. The samples are in `public/samples` (see its `NOTICE.md`): the invoice and
+  the tray are drawn by `scripts/DrawSamples.java`, with made-up data; the chest X-ray is CC0, from Wikimedia Commons.
+  MedGemma's weights are under Google's Health AI Developer Foundations terms, which the window says when it is chosen.
 
 ## How it fits together
 
@@ -66,7 +76,7 @@ Settings, from the environment:
 | Variable | |
 |---|---|
 | `HF_HUB_CACHE` / `HF_HOME` | where the models are (default `~/.cache/huggingface/hub`) |
-| `KILN_STUDIO_STUB` | kinds of work answered by a stub that loads nothing, as `image,song,video` (or `chat`): for trying the app without the GPU |
+| `KILN_STUDIO_STUB` | kinds of work answered by a stub that loads nothing, as `image,song,video` (or `chat`, `vision`): for trying the app without the GPU |
 | `KILN_STUDIO_FFMPEG` | the ffmpeg that makes a video's .mp4 (else the `PATH`'s) |
 | `GGML_VK_MAX_NODES_PER_SUBMIT` | Vulkan only: 8 unless set, so an LTX decode stays under amdgpu's compute timeout |
 | `KILN_STUDIO_BUDGET_GB` | the pool's memory budget (24) |

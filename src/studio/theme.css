@@ -32,6 +32,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;  /* scrollbars and native controls dark too */
     --desk-ground: var(--studio-soot);
     --desk-surface: #22160f;
     --desk-titlebar: #1b110c;
@@ -53,6 +54,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --desk-ground: var(--studio-soot);
   --desk-surface: #22160f;
   --desk-titlebar: #1b110c;
