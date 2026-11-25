@@ -42,6 +42,8 @@ async function waitForServer(url, { timeoutMs = 30000, intervalMs = 250, stopped
  *
  * `roots` are where the app's own files are: the resources folder when packaged, then the app's folder. The rest of
  * the environment passes on: HF_HUB_CACHE (where the models are), KILN_STUDIO_STUB, KILN_STUDIO_BUDGET_GB and so on.
+ * GGML_VK_MAX_NODES_PER_SUBMIT is 8 unless set: with ggml-vulkan's 100, one LTX video decode can outlast amdgpu's
+ * compute timeout and lose the GPU (Kiln's docs/engine-notes.md). Other GPU backends don't read it.
  */
 function backendCommand({ env = process.env, roots, port, parentPid, exists = fs.existsSync }) {
   const jar = env.KILN_STUDIO_JAR || roots.map(root => path.join(root, 'server', 'kiln-studio-server.jar')).find(p => exists(p));
@@ -56,7 +58,7 @@ function backendCommand({ env = process.env, roots, port, parentPid, exists = fs
     // Headless: the server makes images with java.desktop's ImageIO, and on macOS a JVM that starts AWT otherwise shows
     // in the Dock as an app of its own.
     args: ['--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=true', `-Dkiln.library.path=${libraries}`, '-jar', jar],
-    env: { ...env, KILN_STUDIO_PORT: String(port), KILN_STUDIO_PARENT_PID: String(parentPid) },
+    env: { GGML_VK_MAX_NODES_PER_SUBMIT: '8', ...env, KILN_STUDIO_PORT: String(port), KILN_STUDIO_PARENT_PID: String(parentPid) },
   };
 }
 

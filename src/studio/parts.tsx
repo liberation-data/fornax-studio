@@ -3,7 +3,7 @@
 import { PopUpButton } from '@liberation-data/desk/react'
 import { useId } from 'react'
 import type { TextareaHTMLAttributes } from 'react'
-import type { Kind } from './api'
+import type { Kind, Model } from './api'
 import { bytes, seconds } from './format'
 import { useStudio } from './state'
 
@@ -25,11 +25,26 @@ export function ModelPicker({ kind, disabled }: { kind: Kind; disabled?: boolean
         value: m.id,
         label: m.name,
         description: m.available
-          ? `${bytes(m.sizeBytes)}${m.loaded ? ' · loaded' : ''}${m.stub ? ' · stub' : ''}`
+          ? `${bytes(m.sizeBytes)}${m.loaded ? ' · loaded' : ''}${m.stub ? ' · stub' : ''}${m.license ? ` · ${licenseName(m.license)}` : ''}`
           : 'Missing files: see Models',
         disabled: !m.available,
       }))}
     />
+  )
+}
+
+/** The license's name, before what it says of it: "CC BY-NC 4.0". */
+export function licenseName(license: string): string {
+  return license.split(':')[0]?.trim() ?? license
+}
+
+/** Said under the model picker when the chosen model's weights limit what may be done with what they make. */
+export function LicenseNote({ model }: { model: Model | null }) {
+  if (!model?.license) return null
+  return (
+    <p className="studio-license desk-text-small" role="note">
+      Check each model&apos;s license before you use what it makes. {model.name}&apos;s weights are {model.license}.
+    </p>
   )
 }
 
@@ -65,7 +80,7 @@ export function StubNotice({ kind }: { kind: Kind }) {
   if (!status?.stubs.includes(kind)) return null
   return (
     <p className="studio-stub" role="note">
-      <strong>Stub backend.</strong> {kind === 'image' ? 'Images' : kind === 'song' ? 'Songs' : 'Replies'} here are placeholders
+      <strong>Stub backend.</strong> {kind === 'image' ? 'Images' : kind === 'song' ? 'Songs' : kind === 'video' ? 'Videos' : 'Replies'} here are placeholders
       made without loading the model (KILN_STUDIO_STUB={status.stubs.join(',')}). The request is the real one.
     </p>
   )

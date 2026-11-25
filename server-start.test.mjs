@@ -15,7 +15,12 @@ describe('backendCommand', () => {
     expect(c.args).toEqual([
       '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=true', '-Dkiln.library.path=/app/server/native', '-jar', '/app/server/kiln-studio-server.jar',
     ])
-    expect(c.env).toMatchObject({ KILN_STUDIO_PORT: '5191', KILN_STUDIO_PARENT_PID: '42', HF_HUB_CACHE: '/hf' })
+    expect(c.env).toMatchObject({ KILN_STUDIO_PORT: '5191', KILN_STUDIO_PARENT_PID: '42', HF_HUB_CACHE: '/hf', GGML_VK_MAX_NODES_PER_SUBMIT: '8' })
+  })
+
+  it('keeps a GGML_VK_MAX_NODES_PER_SUBMIT of the environment\'s own', () => {
+    const c = backendCommand({ env: { GGML_VK_MAX_NODES_PER_SUBMIT: '100' }, roots: ['/app'], port: 1, parentPid: 1, exists: p => p.endsWith('.jar') })
+    expect(c.env.GGML_VK_MAX_NODES_PER_SUBMIT).toBe('100')
   })
 
   it('prefers the packaged resources, and what the environment names', () => {

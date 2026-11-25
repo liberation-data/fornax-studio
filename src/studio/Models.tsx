@@ -5,9 +5,10 @@ import type { Column } from '@liberation-data/desk/react'
 import { useMemo } from 'react'
 import type { GpuMemory, Model } from './api'
 import { bytes, seconds } from './format'
+import { licenseName } from './parts'
 import { useStudio } from './state'
 
-const KIND = { chat: 'Chat', image: 'Image', song: 'Song' } as const
+const KIND = { chat: 'Chat', image: 'Image', song: 'Song', video: 'Video' } as const
 
 /** A share of a whole, as a bar and in words. */
 function Meter({ label, used, total }: { label: string; used: number | null; total: number | null }) {
@@ -56,7 +57,7 @@ export function Models() {
       key: 'name', header: 'Model', width: '45%',
       render: m => (
         <div className="studio-model-name">
-          <span>{m.name}{m.stub && <span className="studio-badge">stub</span>}</span>
+          <span>{m.name}{m.stub && <span className="studio-badge">stub</span>}{m.license && <span className="studio-badge" title={m.license}>{licenseName(m.license)}</span>}</span>
           <span className="desk-text-caption desk-text-muted">
             {m.available
               ? m.parts.length === 1 ? `${m.parts[0]?.repo} · ${m.parts[0]?.file}` : `${m.parts.length} files: ${m.parts.map(p => p.role).join(', ')}`
