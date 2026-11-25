@@ -132,7 +132,7 @@ jobs:
           set -euo pipefail
           ls -l server/native
           for lib in libkiln_llama libstable-diffusion libkiln_acestep libkiln_yue2; do
-            ls server/native/"$lib".so server/native/"$lib".dylib 2>/dev/null | grep -q . || { echo "::error::no $lib in server/native"; exit 1; }
+            [ -f server/native/"$lib".so ] || [ -f server/native/"$lib".dylib ] || { echo "::error::no $lib in server/native"; exit 1; }
           done
           count=$(ls server/native | grep -cE '\.(so|dylib)$')
           [ "$count" = 4 ] || { echo "::error::expected 4 native libraries in server/native, found $count"; exit 1; }
