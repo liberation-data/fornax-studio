@@ -28,8 +28,21 @@ interface VideoForm {
   audio: boolean
 }
 
-/** LTX takes 8n + 1 frames. */
-export const framesAllowed = (n: number) => Number.isInteger(n) && n >= 9 && n <= 257 && n % 8 === 1
+/**
+ * LTX takes 8n + 1 frames. There is no upper limit: how long a clip can be depends on memory and the backend, not on
+ * the model (Endless Country's clips run to 313 frames).
+ */
+export const framesAllowed = (n: number) => Number.isInteger(n) && n >= 9 && n % 8 === 1
+
+/**
+ * Past this many frames, a full-size refine can run a single GPU dispatch longer than the amdgpu driver allows on
+ * Vulkan (the device is lost). ROCm and CUDA builds don't have that limit.
+ */
+export const LONG_CLIP_FRAMES = 121
+export const longClip = (form: { frames: number; width: number; height: number; twoStage: boolean }) => {
+  const size = clipSize(form)
+  return form.frames > LONG_CLIP_FRAMES && size.width * size.height >= 1024 * 576
+}
 
 /** The clip's size: two-stage refines the draft at twice its size. */
 export const clipSize = (form: { width: number; height: number; twoStage: boolean }) =>
@@ -176,8 +189,11 @@ export function VideoWindow() {
         <TextField label="Height" type="number" step={16} min={128} max={1536} value={height} onChange={e => setHeight(Number(e.target.value))} disabled={busy} />
       </div>
       <div className="studio-pair">
-        <TextField label="Frames" type="number" step={8} min={9} max={257} value={frames} onChange={e => setFrames(Number(e.target.value))} disabled={busy}
-          help={framesAllowed(frames) ? `${seconds(frames / Math.max(1, fps))} at ${fps} fps` : 'Frames are 8n + 1: 49, 97, 121…'} />
+        <TextField label="Frames" type="number" step={8} min={9} value={frames} onChange={e => setFrames(Number(e.target.value))} disabled={busy}
+          help={!framesAllowed(frames) ? 'Frames are 8n + 1: 49, 97, 121…'
+            : `${seconds(frames / Math.max(1, fps))} at ${fps} fps` + (longClip({ frames, width, height, twoStage })
+              ? '. A clip this long at this size can lose the GPU on a Vulkan build; on AMD, a ROCm build handles it, and faster.'
+              : '')} />
         <TextField label="FPS" type="number" min={1} max={60} value={fps} onChange={e => setFps(Number(e.target.value))} disabled={busy} />
       </div>
       <Checkbox checked={twoStage} onChange={setTwoStage} disabled={busy} label="Two-stage"

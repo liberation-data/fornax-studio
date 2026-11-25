@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipSize, framesAllowed, videoPhase, videoRequest } from './Video'
+import { clipSize, framesAllowed, longClip, videoPhase, videoRequest } from './Video'
 
 const form = {
   prompt: ' a kiln at dusk ', image: null, width: 672, height: 448, frames: 49, fps: 24, steps: 8, cfg: 1, seed: '', twoStage: true, audio: true,
@@ -21,8 +21,14 @@ describe('videoRequest', () => {
 
 describe('video form', () => {
   it('takes 8n + 1 frames', () => {
-    expect([9, 49, 121, 257].every(framesAllowed)).toBe(true)
-    expect([8, 48, 50, 265, 1].some(framesAllowed)).toBe(false)
+    expect([9, 49, 121, 257, 313].every(framesAllowed)).toBe(true)
+    expect([8, 48, 50, 314, 1].some(framesAllowed)).toBe(false)
+  })
+
+  it('flags long clips at full size', () => {
+    expect(longClip({ frames: 313, width: 672, height: 448, twoStage: true })).toBe(true)
+    expect(longClip({ frames: 49, width: 672, height: 448, twoStage: true })).toBe(false)
+    expect(longClip({ frames: 313, width: 336, height: 224, twoStage: true })).toBe(false)
   })
 
   it('doubles the size for two-stage', () => {
