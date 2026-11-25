@@ -12,6 +12,7 @@
     "start": "PORT=${PORT:-5190} HOSTNAME=localhost node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
     "server:build": "scripts/build-server.sh",
+    "server:jre": "scripts/build-jre.sh",
     "server": "scripts/run-server.sh",
     "electron": "npm run build && electron .",
     "electron:dev": "ELECTRON_DEV=1 electron .",
@@ -19,6 +20,7 @@
     "package:linux": "npm run build && electron-builder --linux --dir",
     "package:linux:installers": "npm run build && electron-builder --linux",
     "package:mac": "npm run build && electron-builder --mac --dir",
+    "package:mac:dmg": "npm run build && electron-builder --mac",
     "test": "vitest run --exclude '**/node_modules/**' --exclude '.next/**'"
   },
   "dependencies": {
@@ -53,9 +55,44 @@
       "artifactName": "kiln-studio-linux-${arch}.${ext}",
       "maintainer": "Jasper Blues <jasper@liberation-data.com>"
     },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "libvulkan1",
+        "libgomp1"
+      ]
+    },
+    "rpm": {
+      "depends": [
+        "gtk3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "(libXtst or libXtst6)",
+        "xdg-utils",
+        "at-spi2-core",
+        "(libuuid or libuuid1)",
+        "vulkan-loader",
+        "libgomp"
+      ]
+    },
     "mac": {
       "category": "public.app-category.developer-tools",
       "artifactName": "kiln-studio-mac-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "minimumSystemVersion": "13.3",
       "target": [
         "dmg",
         "zip"
@@ -78,7 +115,8 @@
         "to": "server",
         "filter": [
           "kiln-studio-server.jar",
-          "native/**/*"
+          "native/**/*",
+          "jre/**/*"
         ]
       }
     ],

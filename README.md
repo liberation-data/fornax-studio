@@ -42,6 +42,7 @@ Needs Node 22+, Java 25, and Kiln's native libraries (`native/build.sh` in the K
 ```sh
 npm install
 npm run server:build   # builds kiln-studio-server in KILN_HOME (default ../kiln) into server/, with the native libraries
+npm run server:jre     # optional: a Java runtime for the app of its own, in server/jre (what a release ships)
 npm run electron       # builds the page, then starts the app (and with it, the backend)
 ```
 
@@ -66,8 +67,28 @@ Settings, from the environment:
 | `KILN_STUDIO_JAR`, `KILN_LIBRARY_PATH`, `KILN_STUDIO_JAVA` | to run another backend jar, libraries or Java |
 | `PORT`, `KILN_STUDIO_PORT` | the page's and the backend's ports (5190, 5191) |
 
-`npm run package:linux` packs the app with electron-builder, with the backend jar and native libraries as resources.
-Java 25 is not bundled: the app runs `$JAVA_HOME/bin/java`, or `java` on the `PATH`.
+`npm run package:linux` packs the app with electron-builder, with the backend jar, the native libraries and, after
+`npm run server:jre`, a Java runtime as resources (in `server/`). `server:jre` jlinks one from the JDK at `JAVA_HOME`
+with only the modules the jar uses (about 60 MB); the app runs it, `server/jre/bin/java`, and without it
+`$JAVA_HOME/bin/java`, or `java` on the `PATH`.
+
+## Releases
+
+GitHub Actions builds what a release ships, from the Kiln commit in `kiln.ref` (bump it to take a newer Kiln):
+
+- `kiln-backend.yml`, called by the two below once per platform: checks out Kiln, builds the engines the studio runs
+  (`native/build.sh vulkan|metal llama sd acestep`, cached), the backend jar and its jlink'd Java runtime, and checks
+  that the backend starts on it.
+- `linux-build.yml`: a `.deb` and an `.rpm`, x64, Vulkan. They depend on the Vulkan loader and OpenMP; the GPU needs a
+  Vulkan driver.
+- `macos-signed.yml`: a `.dmg` and a `.zip` for Apple silicon and for Intel, Metal, signed with a Developer ID and
+  notarized, in the `apple-signing` environment.
+
+By hand (Actions, Run workflow) they keep what they built as the run's artifacts; on a published release (a `v*` tag)
+they attach it to the release. Models are never bundled: the app finds them in the Hugging Face cache.
+
+The workflows read the private Kiln repository with a deploy key: a read-only deploy key on `liberation-data/kiln`,
+its private half in this repository's `KILN_DEPLOY_KEY` secret.
 
 ## Tests
 

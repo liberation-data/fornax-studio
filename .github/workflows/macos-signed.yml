@@ -1,0 +1,213 @@
+name: macOS signed build
+
+# Builds, signs (Developer ID Application) and notarizes the macOS Studio app with electron-builder + Apple notarytool,
+# carrying Kiln's backend, the engines' Metal libraries and a Java runtime of its own (kiln-backend.yml builds those,
+# in a job of its own with no Apple secret in reach).
+#
+# All signing secrets come from the `apple-signing` GitHub Environment (deployment branches limited to main and v*
+# tags). The signing job below declares `environment: apple-signing`, so the secrets are only ever exposed to that job
+# and only on those refs. The backend job sees only KILN_DEPLOY_KEY, to read the Kiln repository.
+#
+# PER-ARCH, NOT UNIVERSAL. The engines' .dylib files and the jlink'd Java runtime are built for one architecture each,
+# on a runner of that architecture; a universal (lipo) app would need both merged file by file. So arm64 and x64 are
+# built, signed and notarized separately, each on its own runner.
+#
+# WHAT GETS SIGNED. electron-builder signs every Mach-O file inside the .app, which takes in what extraResources puts
+# in Contents/Resources/server: jre/bin/java, the JVM's own dylibs, and the engines' libraries, all with the hardened
+# runtime and build/entitlements.mac.plist (entitlementsInherit), as the JVM's JIT needs allow-jit. The checks below
+# make sure of it, and that the signed java runs.
+
+on:
+  # By hand: builds, signs and notarizes both architectures and keeps them as the run's artifacts. Nothing is attached
+  # to a release.
+  workflow_dispatch:
+  # On a published GitHub Release: the same build, from the release's tag, with the dmg and zip for each architecture
+  # attached to the release. The tag must match v*, as the `apple-signing` environment allows only main and v* tags.
+  release:
+    types: [published]
+
+# Read-only by default. Only the attach job below, which runs no build code and sees no Apple secret, may write to the
+# repo, and only to upload the assets.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Kiln backend (${{ matrix.arch }})
+    # A newer manual run replaces an older one, but a release run is never cancelled.
+    concurrency:
+      group: macos-backend-${{ github.event.release.tag_name || github.ref }}-${{ matrix.arch }}
+      cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Arch-matched runners: macos-15 is Apple silicon, macos-15-intel is the Intel image.
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    uses: ./.github/workflows/kiln-backend.yml
+    with:
+      runner: ${{ matrix.runner }}
+      backend: metal
+      artifact: kiln-studio-server-macos-${{ matrix.arch }}
+    secrets:
+      KILN_DEPLOY_KEY: ${{ secrets.KILN_DEPLOY_KEY }}
+
+  build-signed:
+    name: Build, sign and notarize (${{ matrix.arch }})
+    needs: backend
+    runs-on: ${{ matrix.runner }}
+    environment: apple-signing
+    # A newer manual run replaces an older one, but a release run is never cancelled: a second event must not kill a
+    # notarization in flight.
+    concurrency:
+      group: macos-signed-${{ github.event.release.tag_name || github.ref }}-${{ matrix.arch }}
+      cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
+    strategy:
+      # Keep both legs running so one arch's failure still yields the other's logs.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # No .nvmrc / engines field in the repo; pinning to the current LTS, as drivine-studio does.
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download the backend
+        uses: actions/download-artifact@v4
+        with:
+          name: kiln-studio-server-macos-${{ matrix.arch }}
+          path: ${{ runner.temp }}/backend
+
+      - name: Unpack the backend into server/
+        run: mkdir -p server && tar -C server -xf "$RUNNER_TEMP/backend/server.tar" && ls -lR server | head -40
+
+      # Build the Next.js app with NO signing secrets in scope, so a build-time dependency script can't read the
+      # certificate or the API key. The secrets are set only on the electron-builder step below, after the .p8 is
+      # written.
+      - name: Build the app
+        run: npm run build
+
+      - name: Write Apple API key
+        # notarytool authenticates with an App Store Connect API key (.p8). electron-builder reads APPLE_API_KEY (a
+        # path), APPLE_API_KEY_ID and APPLE_API_ISSUER from the environment. The base64 key is passed through env
+        # rather than interpolated into the command line, and `set +x` keeps the decoded key out of the log. Written
+        # after the build, used only by the signing step, and removed in the cleanup step.
+        env:
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+        run: |
+          set +x
+          printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Sign and notarize
+        # --${{ matrix.arch }} packages a single-architecture app on this runner's native arch. electron-builder signs
+        # every Mach-O inside the .app (including the bundled Java runtime and the engines' .dylib files), notarizes
+        # it, and staples the ticket to the .app. This is the only step the signing secrets are exposed to.
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish never
+        env:
+          # Developer ID Application certificate as a base64-encoded .p12. electron-builder imports it into its own
+          # temporary keychain.
+          CSC_LINK: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+          # Notarization credentials (App Store Connect API key).
+          APPLE_API_KEY: ${{ runner.temp }}/AuthKey.p8
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+          # APPLE_TEAM_ID isn't required for API-key auth but is harmless and lets electron-builder record the team.
+          # KEYCHAIN_PASSWORD and APPLE_SIGNING_IDENTITY are deliberately NOT set: electron-builder manages its own
+          # temporary keychain from CSC_LINK, and finds the Developer ID identity in it.
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Stapling: electron-builder staples the ticket to the .app, and the .zip is built from that stapled app, so
+          # the app a user drags out is stapled. The .dmg is NOT signed or stapled by default (dmg.sign is false);
+          # Gatekeeper checks the stapled app on first run.
+
+      - name: Verify code signature
+        # Real gates (no `|| true`): the build must produce a properly signed, notarized and stapled app bundle, with
+        # the Java runtime and the engines' libraries inside it signed too. stapler validate proves notarization and
+        # stapling actually happened, not just that the app is signed.
+        run: |
+          set -euo pipefail
+          APP="$(ls -d dist/mac*/*.app | head -n 1)"
+          echo "Verifying: $APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          xcrun stapler validate "$APP"
+          spctl -a -vvv -t exec "$APP"
+          server="$APP/Contents/Resources/server"
+          for f in "$server/jre/bin/java" "$server/jre/lib/server/libjvm.dylib" "$server"/native/*.dylib; do
+            codesign --verify --strict --verbose=2 "$f"
+          done
+          echo "java's entitlements:"
+          codesign -d --entitlements - "$server/jre/bin/java"
+
+      # The signed java, under the hardened runtime, must start Kiln's backend: a JIT without its entitlement, or a
+      # library the runtime won't load, fails here rather than on a user's first launch. Stubbed: no models here.
+      - name: Check the signed backend starts
+        run: |
+          set -euo pipefail
+          APP="$(ls -d dist/mac*/*.app | head -n 1)"
+          server="$APP/Contents/Resources/server"
+          KILN_STUDIO_PORT=5191 KILN_STUDIO_STUB=chat,image,song KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+            "$server/jre/bin/java" --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true \
+            "-Dkiln.library.path=$server/native" -jar "$server/kiln-studio-server.jar" > "$RUNNER_TEMP/backend.log" 2>&1 &
+          pid=$!
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5191/api/health; then echo; kill "$pid"; exit 0; fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          echo "::error::the signed backend did not answer on 127.0.0.1:5191"
+          cat "$RUNNER_TEMP/backend.log"
+          exit 1
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiln-studio-macos-${{ matrix.arch }}-signed
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error
+
+      - name: Remove Apple API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+  # Attach both architectures' dmg and zip to the release. A job of its own, so the token that may write to the repo
+  # never shares a job with npm, the build or the Apple secrets. Runs on a published release only, once both legs pass.
+  attach:
+    name: Attach to the release
+    needs: build-signed
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kiln-studio-macos-*-signed
+          merge-multiple: true
+          path: assets
+      # --clobber, so re-running a failed release run replaces the assets.
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          ls -l assets
+          gh release upload "$TAG" assets/*.dmg assets/*.zip --repo "$GITHUB_REPOSITORY" --clobber
