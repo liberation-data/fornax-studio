@@ -12,20 +12,27 @@ describe('backendCommand', () => {
       exists: p => p === '/app/server/kiln-studio-server.jar',
     })
     expect(c.command).toBe('/jdk/bin/java')
-    expect(c.args).toEqual(['--enable-native-access=ALL-UNNAMED', '-Dkiln.library.path=/app/server/native', '-jar', '/app/server/kiln-studio-server.jar'])
+    expect(c.args).toEqual([
+      '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=true', '-Dkiln.library.path=/app/server/native', '-jar', '/app/server/kiln-studio-server.jar',
+    ])
     expect(c.env).toMatchObject({ KILN_STUDIO_PORT: '5191', KILN_STUDIO_PARENT_PID: '42', HF_HUB_CACHE: '/hf' })
   })
 
   it('prefers the packaged resources, and what the environment names', () => {
-    const packaged = backendCommand({ env: {}, roots: ['/res', '/app'], port: 1, parentPid: 1, exists: () => true })
+    const packaged = backendCommand({ env: { JAVA_HOME: '/jdk' }, roots: ['/res', '/app'], port: 1, parentPid: 1, exists: () => true })
     expect(packaged.args.at(-1)).toBe('/res/server/kiln-studio-server.jar')
-    expect(packaged.command).toBe('java')
+    expect(packaged.command).toBe('/res/server/jre/bin/java')
     const named = backendCommand({
       env: { KILN_STUDIO_JAR: '/k.jar', KILN_LIBRARY_PATH: '/libs', KILN_STUDIO_JAVA: '/j25/java' }, roots: [], port: 1, parentPid: 1, exists: () => false,
     })
     expect(named.command).toBe('/j25/java')
     expect(named.args).toContain('-Dkiln.library.path=/libs')
     expect(named.args.at(-1)).toBe('/k.jar')
+  })
+
+  it('runs java from the PATH when there is no Java of its own or JAVA_HOME', () => {
+    const c = backendCommand({ env: {}, roots: ['/app'], port: 1, parentPid: 1, exists: p => p.endsWith('.jar') })
+    expect(c.command).toBe('java')
   })
 
   it('says how to build the server when there is none', () => {

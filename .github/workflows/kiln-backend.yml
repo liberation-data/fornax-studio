@@ -1,0 +1,183 @@
+name: Kiln backend
+
+# What the packaged app runs beside Electron, built for one platform: Kiln's backend (kiln-studio-server.jar), the
+# engines' native libraries it loads through FFM, and a Java runtime jlink'd for it, so the app needs no Java of its
+# own. Called by linux-build.yml and macos-signed.yml, once per platform; it leaves server/ as a tar (a tar, as an
+# artifact alone would drop the executable bits of jre/bin/java) for their packaging jobs to unpack.
+#
+# NO SIGNING SECRETS. This job builds third-party C++ (llama.cpp, stable-diffusion.cpp, acestep.cpp, fetched by Kiln's
+# native/build.sh at the commits Kiln pins) and runs Gradle, so it is kept apart from the job that may see the Apple
+# certificate: it runs in no environment, and is handed only the read-only deploy key for the Kiln repository.
+#
+# WHICH KILN. Kiln is private, at liberation-data/kiln. The commit built is the one in kiln.ref, so a release builds
+# the same backend however much later it is re-run; bump kiln.ref to take a newer Kiln.
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: The runner to build on, whose OS and architecture the build is for
+        type: string
+        required: true
+      backend:
+        description: The GPU backend for native/build.sh (vulkan on Linux, metal on macOS)
+        type: string
+        required: true
+      artifact:
+        description: The name of the artifact to leave server.tar in
+        type: string
+        required: true
+    secrets:
+      KILN_DEPLOY_KEY:
+        description: A read-only deploy key of liberation-data/kiln (its private half)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (${{ inputs.backend }}, ${{ inputs.runner }})
+    runs-on: ${{ inputs.runner }}
+    # The engines take a while from cold: three copies of ggml, and on Vulkan its shaders three times over. The cache
+    # below keeps them between runs while native/ and the engines' commits stay the same.
+    timeout-minutes: 150
+    env:
+      # Binaries for anyone's machine, not the runner's: no -march=native (on x86, ggml's AVX2/FMA baseline instead).
+      CMAKE_EXTRA: -DGGML_NATIVE=OFF
+      # macOS: the oldest release the engines are built for (llama.cpp's own releases use 13.3); matches the app's
+      # mac.minimumSystemVersion in package.json. CMake and clang both read it. Ignored on Linux.
+      MACOSX_DEPLOYMENT_TARGET: '13.3'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Which Kiln
+        id: kiln
+        run: echo "ref=$(tr -d '[:space:]' < kiln.ref)" >> "$GITHUB_OUTPUT"
+
+      # The deploy key is used here only, and not kept in the checkout's git config (persist-credentials: false), so
+      # nothing after this step, Gradle or the engines' builds, can use it.
+      - name: Checkout Kiln
+        uses: actions/checkout@v4
+        with:
+          repository: liberation-data/kiln
+          ref: ${{ steps.kiln.outputs.ref }}
+          path: kiln
+          ssh-key: ${{ secrets.KILN_DEPLOY_KEY }}
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build > /dev/null
+
+      # The LunarG SDK, for glslc and current Vulkan headers: Ubuntu 24.04's own (1.3.275) are older than ggml's Vulkan
+      # backend is tested with. Built on 24.04 rather than a newer image to keep the glibc the libraries need at 2.39.
+      # The way llama.cpp's own CI does it (.github/workflows/build-vulkan.yml there).
+      - name: Set up the Vulkan SDK (Linux)
+        if: runner.os == 'Linux' && inputs.backend == 'vulkan'
+        run: |
+          set -euo pipefail
+          version="$(curl -fsSL https://vulkan.lunarg.com/sdk/latest/linux.txt)"
+          mkdir -p "$RUNNER_TEMP/vulkan_sdk"
+          curl -fsSL "https://sdk.lunarg.com/sdk/download/$version/linux/vulkan_sdk.tar.xz" | tar -xJ -C "$RUNNER_TEMP/vulkan_sdk" --strip-components 1
+          echo "VULKAN_SDK_VERSION=$version" >> "$GITHUB_ENV"
+          echo "Vulkan SDK $version"
+
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew list ninja > /dev/null 2>&1 || brew install ninja
+
+      - name: Cache the native libraries
+        id: natives
+        uses: actions/cache@v4
+        with:
+          path: kiln/build/native
+          key: natives-${{ runner.os }}-${{ runner.arch }}-${{ inputs.backend }}-${{ env.VULKAN_SDK_VERSION }}-${{ hashFiles('kiln/native/**', 'kiln/kiln-llama/native/**', 'kiln/kiln-acestep/native/**') }}
+
+      # Only the engines the studio runs: not yue2.
+      - name: Build the native libraries
+        if: steps.natives.outputs.cache-hit != 'true'
+        working-directory: kiln
+        run: |
+          set -euo pipefail
+          if [ -n "${VULKAN_SDK_VERSION:-}" ]; then
+            # setup-env.sh reads $1 without a default, which set -u rejects; source it with -u off.
+            set +u
+            source "$RUNNER_TEMP/vulkan_sdk/setup-env.sh"
+            set -u
+            # For the link's -lvulkan: setup-env.sh sets the loader's path for running, not for linking. Since SDK
+            # 1.4.x the loader is in lib/VulkanLoader/lib, not lib.
+            export LIBRARY_PATH="$VULKAN_SDK/lib/VulkanLoader/lib:$VULKAN_SDK/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
+          fi
+          native/build.sh ${{ inputs.backend }} llama sd acestep
+
+      - name: Build the backend and its Java runtime
+        env:
+          KILN_HOME: kiln
+          KILN_BACKEND: ${{ inputs.backend }}
+          KILN_STUDIO_REQUIRE_NATIVE: '1'
+        run: |
+          set -euo pipefail
+          scripts/build-server.sh
+          scripts/build-jre.sh
+
+      # What the libraries need of the system: on Linux the Vulkan loader, OpenMP and the C++ runtime, which the .deb
+      # and .rpm depend on; on macOS only system frameworks. A library that needs something else fails here.
+      - name: Check the native libraries
+        run: |
+          set -euo pipefail
+          ls -l server/native
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get install -y -qq libvulkan1 > /dev/null
+            for lib in server/native/*.so; do
+              echo "== $lib"; ldd "$lib"
+              if ldd "$lib" | grep -q 'not found'; then echo "::error::$lib needs a library that isn't there"; exit 1; fi
+            done
+            echo "Newest glibc needed: $(objdump -T server/native/*.so | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)"
+          else
+            for lib in server/native/*.dylib; do
+              echo "== $lib"; otool -L "$lib"
+              # Line 1 is the file, line 2 the library's own name; then what it links.
+              if otool -L "$lib" | tail -n +3 | grep -v -e '/usr/lib/' -e '/System/Library/'; then
+                echo "::error::$lib links a library the app doesn't ship"; exit 1
+              fi
+            done
+            otool -l server/native/*.dylib | grep -A3 LC_BUILD_VERSION | grep minos | sort -u
+          fi
+
+      # The jar on the runtime built for it: it must start and answer, with every kind of work stubbed (no GPU here, and
+      # no models). A module jlink left out fails here.
+      - name: Check the backend starts on its runtime
+        run: |
+          set -euo pipefail
+          KILN_STUDIO_PORT=5191 KILN_STUDIO_STUB=chat,image,song KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+            server/jre/bin/java --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true \
+            -Dkiln.library.path=server/native -jar server/kiln-studio-server.jar > "$RUNNER_TEMP/backend.log" 2>&1 &
+          pid=$!
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5191/api/health; then echo; kill "$pid"; exit 0; fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          echo "::error::the backend did not answer on 127.0.0.1:5191"
+          cat "$RUNNER_TEMP/backend.log"
+          exit 1
+
+      - name: Pack server/
+        run: tar -C server -cf server.tar .
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          path: server.tar
+          if-no-files-found: error
+          retention-days: 7

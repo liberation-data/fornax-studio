@@ -37,7 +37,8 @@ async function waitForServer(url, { timeoutMs = 30000, intervalMs = 250, stopped
  *
  *   KILN_STUDIO_JAR      the server's jar; else server/kiln-studio-server.jar in the app (npm run server:build puts it there)
  *   KILN_LIBRARY_PATH    Kiln's native libraries; else server/native beside the jar
- *   KILN_STUDIO_JAVA     the java to run it with (25 or later); else $JAVA_HOME/bin/java; else java on the PATH
+ *   KILN_STUDIO_JAVA     the java to run it with (25 or later); else the app's own, server/jre/bin/java (scripts/build-jre.sh
+ *                        puts it there, and a release ships it); else $JAVA_HOME/bin/java; else java on the PATH
  *
  * `roots` are where the app's own files are: the resources folder when packaged, then the app's folder. The rest of
  * the environment passes on: HF_HUB_CACHE (where the models are), KILN_STUDIO_STUB, KILN_STUDIO_BUDGET_GB and so on.
@@ -48,10 +49,13 @@ function backendCommand({ env = process.env, roots, port, parentPid, exists = fs
     throw new Error('Kiln Studio\'s server is not built. Run `npm run server:build` (it builds kiln-studio-server in the Kiln checkout at KILN_HOME), or set KILN_STUDIO_JAR.');
   }
   const libraries = env.KILN_LIBRARY_PATH || path.join(path.dirname(jar), 'native');
-  const java = env.KILN_STUDIO_JAVA || (env.JAVA_HOME ? path.join(env.JAVA_HOME, 'bin', 'java') : 'java');
+  const bundled = roots.map(root => path.join(root, 'server', 'jre', 'bin', 'java')).find(p => exists(p));
+  const java = env.KILN_STUDIO_JAVA || bundled || (env.JAVA_HOME ? path.join(env.JAVA_HOME, 'bin', 'java') : 'java');
   return {
     command: java,
-    args: ['--enable-native-access=ALL-UNNAMED', `-Dkiln.library.path=${libraries}`, '-jar', jar],
+    // Headless: the server makes images with java.desktop's ImageIO, and on macOS a JVM that starts AWT otherwise shows
+    // in the Dock as an app of its own.
+    args: ['--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=true', `-Dkiln.library.path=${libraries}`, '-jar', jar],
     env: { ...env, KILN_STUDIO_PORT: String(port), KILN_STUDIO_PARENT_PID: String(parentPid) },
   };
 }
