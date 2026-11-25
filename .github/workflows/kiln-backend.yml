@@ -109,9 +109,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "${VULKAN_SDK_VERSION:-}" ]; then
+            # setup-env.sh reads $1 without a default, which set -u rejects; source it with -u off.
+            set +u
             source "$RUNNER_TEMP/vulkan_sdk/setup-env.sh"
-            # For the link's -lvulkan: setup-env.sh sets the loader's path for running, not for linking.
-            export LIBRARY_PATH="$VULKAN_SDK/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
+            set -u
+            # For the link's -lvulkan: setup-env.sh sets the loader's path for running, not for linking. Since SDK
+            # 1.4.x the loader is in lib/VulkanLoader/lib, not lib.
+            export LIBRARY_PATH="$VULKAN_SDK/lib/VulkanLoader/lib:$VULKAN_SDK/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
           fi
           native/build.sh ${{ inputs.backend }} llama sd acestep yue2
 
