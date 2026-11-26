@@ -67,7 +67,8 @@
         "libuuid1",
         "libsecret-1-0",
         "libvulkan1",
-        "libgomp1"
+        "libgomp1",
+        "mesa-vulkan-drivers | vulkan-icd"
       ]
     },
     "rpm": {
@@ -81,7 +82,8 @@
         "at-spi2-core",
         "(libuuid or libuuid1)",
         "vulkan-loader",
-        "libgomp"
+        "libgomp",
+        "(mesa-vulkan-drivers or xorg-x11-drv-nvidia-libs or nvidia-driver-libs)"
       ]
     },
     "mac": {
