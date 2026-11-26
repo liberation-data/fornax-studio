@@ -104,7 +104,7 @@ export function ImageWindow() {
         <Button intent="default" disabled={!model || busy || !prompt.trim()} onClick={() => void generate()}>
           {busy ? 'Generating…' : 'Generate'}
         </Button>
-        {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop waiting</Button>}
+        {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop</Button>}
       </div>
       {model && !model.loaded && !busy && (
         <p className="desk-text-small desk-text-muted">The first image loads {model.name} ({bytes(model.sizeBytes)}) onto the GPU first.</p>

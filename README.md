@@ -24,9 +24,9 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
   when it is chosen.
 - **Video**: LTX-2.5 through stable-diffusion.cpp: a prompt, an optional first frame, size, frames, fps, and sound on or
   off in; an .mp4 out, played in the window. Two-stage (the default) is Kiln's VideoClip recipe: a draft, the x2 latent
-  upscaler, a refine at twice the size. Progress shows each stage's steps. A clip takes minutes, and stable-diffusion.cpp
-  can't be stopped mid-render: Stop waiting leaves the backend to finish it. Needs `ffmpeg` (on the `PATH`, in
-  `/opt/homebrew/bin` or `/usr/local/bin`, or `KILN_STUDIO_FFMPEG`) to make the .mp4.
+  upscaler, a refine at twice the size. Progress shows each stage's steps. A clip takes minutes; Stop cancels it at the
+  next step. Needs `ffmpeg` (on the `PATH`, in `/opt/homebrew/bin` or `/usr/local/bin`, or `KILN_STUDIO_FFMPEG`) to make
+  the .mp4.
 - **Inspect**: an image (dropped on, chosen, or one of the samples) and a prompt in; a vision model's answer out,
   streamed with tokens per second, as free text or as JSON held to a schema (`LlamaModel.chatJson` with images, through
   llama.cpp's mtmd). Three models: Qwen3-VL 4B (the default), PaddleOCR-VL 1.6 and MedGemma 1.5 4B. Three presets fill

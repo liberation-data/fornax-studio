@@ -208,7 +208,7 @@ export function VideoWindow() {
         <Button intent="default" disabled={!model || busy || !prompt.trim() || !sizeOk || !framesAllowed(frames)} onClick={() => void generate()}>
           {busy ? 'Generating…' : 'Generate'}
         </Button>
-        {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop waiting</Button>}
+        {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop</Button>}
       </div>
       {model && !model.loaded && !busy && (
         <p className="desk-text-small desk-text-muted">The first clip loads {model.name} ({bytes(model.sizeBytes)}) onto the GPU first. A clip takes minutes.</p>
