@@ -163,7 +163,7 @@ jobs:
       - name: Check the backend starts on its runtime
         run: |
           set -euo pipefail
-          KILN_STUDIO_PORT=5191 KILN_STUDIO_STUB=chat,image,song,video KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+          KILN_ALLOW_CPU=true KILN_STUDIO_PORT=5191 KILN_STUDIO_STUB=chat,image,song,video KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
             server/jre/bin/java --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true \
             -Dkiln.library.path=server/native -jar server/kiln-studio-server.jar > "$RUNNER_TEMP/backend.log" 2>&1 &
           pid=$!

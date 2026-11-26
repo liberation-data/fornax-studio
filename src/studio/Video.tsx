@@ -156,7 +156,7 @@ export function VideoWindow() {
         }
       }, controller.signal)
     } catch (e) {
-      setProblem(controller.signal.aborted ? 'Stopped waiting. The backend finishes the clip anyway (stable-diffusion.cpp has no way to stop a render).' : e instanceof Error ? e.message : String(e))
+      setProblem(controller.signal.aborted ? 'Stopped. The backend cancels the render at its next step.' : e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
       setState(null)

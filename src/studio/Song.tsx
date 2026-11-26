@@ -90,7 +90,7 @@ export function Song() {
         }
       }, controller.signal)
     } catch (e) {
-      setProblem(controller.signal.aborted ? 'Stopped waiting. The backend finishes the song anyway.' : e instanceof Error ? e.message : String(e))
+      setProblem(controller.signal.aborted ? 'Stopped waiting. The backend finishes the song anyway (the song engines report no progress to stop at).' : e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
       setPhase(null)

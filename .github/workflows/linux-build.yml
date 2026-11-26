@@ -148,7 +148,7 @@ jobs:
           set -euo pipefail
           sudo apt-get install -y -qq xvfb libvulkan1 > /dev/null
           app="dist/linux-unpacked/kiln-studio"
-          env -u JAVA_HOME PATH=/usr/bin:/bin KILN_STUDIO_STUB=chat,image,song KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+          env -u JAVA_HOME PATH=/usr/bin:/bin KILN_ALLOW_CPU=true KILN_STUDIO_STUB=chat,image,song KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
             xvfb-run -a "$app" --no-sandbox > "$RUNNER_TEMP/app.log" 2>&1 &
           pid=$!
           ok=0

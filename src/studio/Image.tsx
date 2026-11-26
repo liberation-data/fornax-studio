@@ -78,7 +78,7 @@ export function ImageWindow() {
         }
       }, controller.signal)
     } catch (e) {
-      setProblem(controller.signal.aborted ? 'Stopped waiting. The backend finishes the image anyway.' : e instanceof Error ? e.message : String(e))
+      setProblem(controller.signal.aborted ? 'Stopped. The backend cancels the image at its next step.' : e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
       setLoading(null)
