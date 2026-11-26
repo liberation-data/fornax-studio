@@ -1,7 +1,7 @@
 #!/bin/bash
 # The .deb's and .rpm's after-remove script: electron-builder's own (app-builder-lib 26.18.0,
-# templates/linux/after-remove.tpl), as it is, then the kiln command. electron-builder fills in the ${...} macros, so
-# the kiln part uses none.
+# templates/linux/after-remove.tpl), as it is, then the fornax command. electron-builder fills in the ${...} macros, so
+# the fornax part uses none.
 
 
 # Delete the link to the binary
@@ -29,10 +29,10 @@ if [ -f "$APPARMOR_PROFILE_DEST" ]; then
   fi
   rm -f "$APPARMOR_PROFILE_DEST"
 fi
-# The kiln command: /usr/bin/kiln goes when it is Kiln Studio's and the app has gone. An upgrade runs this after the
-# new version's files are in place (dpkg's postrm upgrade, rpm's %postun with $1 = 1), so the app's kiln-cli is
-# still there then, and the /usr/bin/kiln the new version just wrote stays.
-if [ ! -e '/opt/${sanitizedProductName}/resources/server/kiln-cli' ] && [ -f /usr/bin/kiln ] && [ ! -L /usr/bin/kiln ] \
-    && head -n 5 /usr/bin/kiln | grep -q '^# kiln-studio-launcher'; then
-  rm -f /usr/bin/kiln
+# The fornax command: /usr/bin/fornax goes when it is Fornax Studio's and the app has gone. An upgrade runs this after the
+# new version's files are in place (dpkg's postrm upgrade, rpm's %postun with $1 = 1), so the app's fornax-cli is
+# still there then, and the /usr/bin/fornax the new version just wrote stays.
+if [ ! -e '/opt/${sanitizedProductName}/resources/server/fornax-cli' ] && [ -f /usr/bin/fornax ] && [ ! -L /usr/bin/fornax ] \
+    && head -n 5 /usr/bin/fornax | grep -q '^# fornax-studio-launcher'; then
+  rm -f /usr/bin/fornax
 fi

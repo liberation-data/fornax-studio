@@ -30,7 +30,7 @@ export function useStudio(): Studio {
   return studio
 }
 
-const CHOSEN = 'kiln-studio.chosen'
+const CHOSEN = 'fornax-studio.chosen'
 const remembered = (): Partial<Record<Kind, string>> => {
   try {
     return JSON.parse(window.localStorage.getItem(CHOSEN) ?? '{}') as Partial<Record<Kind, string>>

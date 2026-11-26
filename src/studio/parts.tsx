@@ -81,7 +81,7 @@ export function StubNotice({ kind }: { kind: Kind }) {
   return (
     <p className="studio-stub" role="note">
       <strong>Stub backend.</strong> {kind === 'image' ? 'Images' : kind === 'song' ? 'Songs' : kind === 'video' ? 'Videos' : kind === 'vision' ? 'Answers' : 'Replies'} here are placeholders
-      made without loading the model (KILN_STUDIO_STUB={status.stubs.join(',')}). The request is the real one.
+      made without loading the model (FORNAX_STUDIO_STUB={status.stubs.join(',')}). The request is the real one.
     </p>
   )
 }

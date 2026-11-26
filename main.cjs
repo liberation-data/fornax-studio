@@ -1,4 +1,4 @@
-// main.cjs: the desktop app. It starts Kiln's backend (kiln-studio-server, a JVM holding the models), then runs the
+// main.cjs: the desktop app. It starts Fornax's backend (fornax-studio-server, a JVM holding the models), then runs the
 // studio's standalone Next.js server in Electron's own Node and opens a window on it. The page talks only to the Next.js
 // server, which passes /api/* on to the backend, so the browser app works the same from npm start.
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell, utilityProcess } = require('electron');
@@ -6,18 +6,18 @@ const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { answers, waitForServer, backendCommand } = require('./server-start.cjs');
-const kilnCommand = require('./kiln-command.cjs');
+const { answers, waitForServer, backendCommand, keptFromKiln } = require('./server-start.cjs');
+const fornaxCommand = require('./fornax-command.cjs');
 
 const PORT = process.env.PORT ?? '5190';
 const URL = `http://localhost:${PORT}`;
-const BACKEND_PORT = process.env.KILN_STUDIO_PORT ?? '5191';
+const BACKEND_PORT = process.env.FORNAX_STUDIO_PORT ?? '5191';
 const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 const isDev = process.env.ELECTRON_DEV === '1';
-const HOME = process.env.KILN_STUDIO_HOME ?? path.join(os.homedir(), '.kiln-studio');
+const HOME = process.env.FORNAX_STUDIO_HOME ?? keptFromKiln(path.join(os.homedir(), '.fornax-studio'), path.join(os.homedir(), '.kiln-studio'));
 
 // A log file, since a packaged app has no terminal to write to.
-const logPath = path.join(os.tmpdir(), 'kiln-studio-electron.log');
+const logPath = path.join(os.tmpdir(), 'fornax-studio-electron.log');
 const logStream = fs.createWriteStream(logPath, { flags: 'a' });
 
 function log(...args) {
@@ -35,7 +35,11 @@ log('App path:', app.getAppPath());
 log('ELECTRON_DEV:', process.env.ELECTRON_DEV);
 log('Log file:', logPath);
 
-app.setName('Kiln Studio');
+app.setName('Fornax Studio');
+// Settings from before the rename live under Kiln Studio's name; keep using them until Fornax Studio has its own. Electron
+// creates its own folder before this runs (for Crashpad), so a profile is told by its Local State file, not by the folder.
+const hasProfile = dir => fs.existsSync(path.join(dir, 'Local State'));
+app.setPath('userData', keptFromKiln(app.getPath('userData'), path.join(path.dirname(app.getPath('userData')), 'Kiln Studio'), hasProfile));
 
 const ICON = path.join(__dirname, 'build', 'icon.png');
 
@@ -59,7 +63,7 @@ process.on('uncaughtException', error => logError('Uncaught exception:', error))
 process.on('unhandledRejection', error => logError('Unhandled rejection:', error));
 
 /*
- * Kiln's backend: a JVM that loads the models onto the GPU. It is told this app's pid and exits with it, so a model
+ * Fornax's backend: a JVM that loads the models onto the GPU. It is told this app's pid and exits with it, so a model
  * never stays loaded after the app has gone, even if the app is killed rather than quit.
  */
 async function startBackend() {
@@ -67,24 +71,24 @@ async function startBackend() {
   if (await answers(health)) {
     // In development the backend may be running already (npm run server), so it can be restarted on its own.
     if (isDev) {
-      log('[Electron] Dev mode - using the Kiln backend already at', BACKEND);
+      log('[Electron] Dev mode - using the Fornax backend already at', BACKEND);
       return;
     }
-    throw new Error(`Another server already answers at ${BACKEND}. Stop it, or set KILN_STUDIO_PORT to a free port.`);
+    throw new Error(`Another server already answers at ${BACKEND}. Stop it, or set FORNAX_STUDIO_PORT to a free port.`);
   }
   const roots = appRoots();
   const { command, args, env } = backendCommand({ roots, port: BACKEND_PORT, parentPid: process.pid });
-  log('[Electron] Starting the Kiln backend:', command, args.join(' '));
+  log('[Electron] Starting the Fornax backend:', command, args.join(' '));
   backendProcess = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
-  backendProcess.stdout.on('data', data => log('[kiln]', data.toString().trim()));
-  backendProcess.stderr.on('data', data => logError('[kiln]', data.toString().trim()));
+  backendProcess.stdout.on('data', data => log('[fornax]', data.toString().trim()));
+  backendProcess.stderr.on('data', data => logError('[fornax]', data.toString().trim()));
   let exited = null;
   backendProcess.on('error', error => {
-    exited = `The Kiln backend could not start (${command}): ${error.message}. Kiln needs Java 25: set JAVA_HOME or KILN_STUDIO_JAVA.`;
+    exited = `The Fornax backend could not start (${command}): ${error.message}. Fornax needs Java 25: set JAVA_HOME or FORNAX_STUDIO_JAVA.`;
   });
   backendProcess.on('exit', code => {
-    exited = exited ?? `The Kiln backend exited with code ${code} before it answered at ${BACKEND}`;
-    log(`[kiln] Process exited with code ${code}`);
+    exited = exited ?? `The Fornax backend exited with code ${code} before it answered at ${BACKEND}`;
+    log(`[fornax] Process exited with code ${code}`);
     backendProcess = null;
   });
   return waitForServer(health, { stopped: () => exited });
@@ -108,7 +112,7 @@ async function startServer() {
   // Electron's utilityProcess runs it in Electron's own Node, so no separate Node is needed.
   serverProcess = utilityProcess.fork(serverPath, [], {
     cwd: serverCwd,
-    env: { ...process.env, PORT, HOSTNAME: 'localhost', KILN_STUDIO_SERVER: BACKEND },
+    env: { ...process.env, PORT, HOSTNAME: 'localhost', FORNAX_STUDIO_SERVER: BACKEND },
     stdio: 'pipe',
   });
   serverProcess.stdout.on('data', data => log('[Next.js]', data.toString().trim()));
@@ -155,8 +159,8 @@ function createWindow() {
 
   win.maximize();
   win.show();
-  // KILN_STUDIO_OPEN=chat,models opens those windows at start (the page reads ?open=).
-  const start = process.env.KILN_STUDIO_OPEN ? `${URL}/?open=${encodeURIComponent(process.env.KILN_STUDIO_OPEN)}` : URL;
+  // FORNAX_STUDIO_OPEN=chat,models opens those windows at start (the page reads ?open=).
+  const start = process.env.FORNAX_STUDIO_OPEN ? `${URL}/?open=${encodeURIComponent(process.env.FORNAX_STUDIO_OPEN)}` : URL;
   log('[Electron] Loading URL:', start);
   win.loadURL(start);
 
@@ -166,20 +170,20 @@ function createWindow() {
   if (process.env.ELECTRON_DEVTOOLS === '1') {
     win.webContents.openDevTools({ mode: 'detach' });
   }
-  // For a screenshot of the app as it runs: KILN_STUDIO_CAPTURE=<file.png> saves the window once the page has settled.
-  if (process.env.KILN_STUDIO_CAPTURE) {
+  // For a screenshot of the app as it runs: FORNAX_STUDIO_CAPTURE=<file.png> saves the window once the page has settled.
+  if (process.env.FORNAX_STUDIO_CAPTURE) {
     win.webContents.once('did-finish-load', () => setTimeout(async () => {
       const image = await win.webContents.capturePage();
-      fs.writeFileSync(process.env.KILN_STUDIO_CAPTURE, image.toPNG());
-      log('[Electron] Captured the window to', process.env.KILN_STUDIO_CAPTURE);
-      if (process.env.KILN_STUDIO_CAPTURE_QUIT === '1') app.quit();
-    }, Number(process.env.KILN_STUDIO_CAPTURE_DELAY ?? 4000)));
+      fs.writeFileSync(process.env.FORNAX_STUDIO_CAPTURE, image.toPNG());
+      log('[Electron] Captured the window to', process.env.FORNAX_STUDIO_CAPTURE);
+      if (process.env.FORNAX_STUDIO_CAPTURE_QUIT === '1') app.quit();
+    }, Number(process.env.FORNAX_STUDIO_CAPTURE_DELAY ?? 4000)));
   }
 }
 
 /*
- * The kiln command: "Install kiln command…" writes kiln-cli's launcher, rendered with this app's Java, jars and
- * natives, into a folder on PATH (kiln-command.cjs has the rendering and the checks). Linux: ~/.local/bin. macOS:
+ * The fornax command: "Install fornax command…" writes fornax-cli's launcher, rendered with this app's Java, jars and
+ * natives, into a folder on PATH (fornax-command.cjs has the rendering and the checks). Linux: ~/.local/bin. macOS:
  * /usr/local/bin, with an administrator's password when it isn't writable, or ~/.local/bin. Windows: TODO, there is no
  * Windows build yet (see installTargets).
  */
@@ -188,31 +192,31 @@ function appRoots() {
 }
 
 function cliItems() {
-  const cli = kilnCommand.bundledCli({ roots: appRoots() });
-  if (kilnCommand.installTargets({ platform: process.platform, home: os.homedir() }).length === 0) return [];
-  const missing = 'This build of Kiln Studio has no kiln command: it was built from a Kiln without kiln-cli.';
+  const cli = fornaxCommand.bundledCli({ roots: appRoots() });
+  if (fornaxCommand.installTargets({ platform: process.platform, home: os.homedir() }).length === 0) return [];
+  const missing = 'This build of Fornax Studio has no fornax command: it was built from a Fornax without fornax-cli.';
   return [
     {
-      label: cli ? 'Install kiln command…' : 'Install kiln command… (not in this build)',
-      enabled: Boolean(cli), toolTip: cli ? 'Put the kiln command on your PATH, so a terminal can run kiln' : missing,
-      click: () => installKiln(cli).catch(error => commandError('install', error)),
+      label: cli ? 'Install fornax command…' : 'Install fornax command… (not in this build)',
+      enabled: Boolean(cli), toolTip: cli ? 'Put the fornax command on your PATH, so a terminal can run fornax' : missing,
+      click: () => installFornax(cli).catch(error => commandError('install', error)),
     },
     {
-      label: 'Uninstall kiln command',
-      click: () => uninstallKiln().catch(error => commandError('uninstall', error)),
+      label: 'Uninstall fornax command',
+      click: () => uninstallFornax().catch(error => commandError('uninstall', error)),
     },
   ];
 }
 
 function commandError(what, error) {
-  logError(`[Electron] Could not ${what} the kiln command:`, error);
-  dialog.showMessageBox({ type: 'error', message: `Kiln Studio could not ${what} the kiln command`, detail: error.message });
+  logError(`[Electron] Could not ${what} the fornax command:`, error);
+  dialog.showMessageBox({ type: 'error', message: `Fornax Studio could not ${what} the fornax command`, detail: error.message });
 }
 
 /** Runs the sh command as an administrator, after macOS asks for the password. Resolves false when cancelled. */
 function runAsAdmin(command) {
   return new Promise((resolve, reject) => {
-    execFile('osascript', ['-e', kilnCommand.adminScript(command)], (error, stdout, stderr) => {
+    execFile('osascript', ['-e', fornaxCommand.adminScript(command)], (error, stdout, stderr) => {
       if (!error) return resolve(true);
       if (/-128/.test(stderr)) return resolve(false);  // the user cancelled the password prompt
       reject(new Error(stderr.trim() || error.message));
@@ -222,76 +226,76 @@ function runAsAdmin(command) {
 
 const tilde = p => (p.startsWith(os.homedir() + path.sep) ? `~${p.slice(os.homedir().length)}` : p);
 
-async function installKiln(cli) {
-  const problem = kilnCommand.locationProblem({ platform: process.platform, resourcesPath: cli.root });
+async function installFornax(cli) {
+  const problem = fornaxCommand.locationProblem({ platform: process.platform, resourcesPath: cli.root });
   if (problem) {
-    await dialog.showMessageBox({ type: 'warning', message: 'The kiln command can\'t be installed from here', detail: problem });
+    await dialog.showMessageBox({ type: 'warning', message: 'The fornax command can\'t be installed from here', detail: problem });
     return;
   }
-  const targets = kilnCommand.installTargets({ platform: process.platform, home: os.homedir() });
+  const targets = fornaxCommand.installTargets({ platform: process.platform, home: os.homedir() });
   let target = targets[0];
   if (targets.length > 1) {
     const { response } = await dialog.showMessageBox({
-      type: 'question', message: 'Where should the kiln command go?',
+      type: 'question', message: 'Where should the fornax command go?',
       detail: `${targets[0].dir} is on every terminal's PATH, and may ask for an administrator's password.\n${tilde(targets[1].dir)} is just for you, and needs no password, but may need adding to your PATH.`,
       buttons: targets.map(t => tilde(t.dir)).concat('Cancel'), defaultId: 0, cancelId: targets.length,
     });
     if (response === targets.length) return;
     target = targets[response];
   }
-  const file = path.join(target.dir, 'kiln');
-  if (kilnCommand.launcherState(file) === 'other') {
+  const file = path.join(target.dir, 'fornax');
+  if (fornaxCommand.launcherState(file) === 'other') {
     const { response } = await dialog.showMessageBox({
-      type: 'warning', message: `There is already a kiln command at ${tilde(file)}`,
-      detail: 'Kiln Studio didn\'t install it. Replace it with Kiln Studio\'s?',
+      type: 'warning', message: `There is already a fornax command at ${tilde(file)}`,
+      detail: 'Fornax Studio didn\'t install it. Replace it with Fornax Studio\'s?',
       buttons: ['Replace', 'Cancel'], defaultId: 1, cancelId: 1,
     });
     if (response !== 0) return;
   }
-  const content = kilnCommand.launcherFor(cli);
+  const content = fornaxCommand.launcherFor(cli);
   try {
-    kilnCommand.writeLauncher(file, content);
+    fornaxCommand.writeLauncher(file, content);
   } catch (error) {
     if (!target.admin || !['EACCES', 'EPERM'].includes(error.code)) throw error;
     // /usr/local/bin is root's: write the launcher to a temporary file, then copy it there as an administrator.
-    const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kiln-studio-')), 'kiln');
+    const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fornax-studio-')), 'fornax');
     fs.writeFileSync(tmp, content, { mode: 0o755 });
-    const done = await runAsAdmin(kilnCommand.adminInstallCommand({ tmp, dir: target.dir, file }))
+    const done = await runAsAdmin(fornaxCommand.adminInstallCommand({ tmp, dir: target.dir, file }))
       .finally(() => fs.rmSync(path.dirname(tmp), { recursive: true, force: true }));
     if (!done) return;
   }
-  log('[Electron] Installed the kiln command at', file);
-  const onPath = kilnCommand.onPath(target.dir, await kilnCommand.terminalPath());
+  log('[Electron] Installed the fornax command at', file);
+  const onPath = fornaxCommand.onPath(target.dir, await fornaxCommand.terminalPath());
   const pathNote = onPath ? '' : `\n\n${tilde(target.dir)} isn't on your PATH yet. Add this line to your shell's profile (~/.bashrc, ~/.zshrc), then open a new terminal:\n\n    export PATH="$HOME/.local/bin:$PATH"`;
   await dialog.showMessageBox({
-    type: 'info', message: 'The kiln command is installed',
-    detail: `${tilde(file)} runs on Kiln Studio's own Java, from ${cli.root}. If you move Kiln Studio, install the command again.\n\nTry, in a new terminal:\n\n    kiln list${pathNote}`,
+    type: 'info', message: 'The fornax command is installed',
+    detail: `${tilde(file)} runs on Fornax Studio's own Java, from ${cli.root}. If you move Fornax Studio, install the command again.\n\nTry, in a new terminal:\n\n    fornax list${pathNote}`,
   });
 }
 
-async function uninstallKiln() {
-  const targets = kilnCommand.installTargets({ platform: process.platform, home: os.homedir() });
+async function uninstallFornax() {
+  const targets = fornaxCommand.installTargets({ platform: process.platform, home: os.homedir() });
   const removed = [];
   const left = [];
   for (const target of targets) {
-    const file = path.join(target.dir, 'kiln');
-    const state = kilnCommand.launcherState(file);
+    const file = path.join(target.dir, 'fornax');
+    const state = fornaxCommand.launcherState(file);
     if (state === 'other') left.push(file);
     if (state !== 'studio') continue;
     try {
-      kilnCommand.removeLauncher(file);
+      fornaxCommand.removeLauncher(file);
     } catch (error) {
       if (!target.admin || !['EACCES', 'EPERM'].includes(error.code)) throw error;
-      if (!(await runAsAdmin(`rm -f ${kilnCommand.shellQuote(file)}`))) return;
+      if (!(await runAsAdmin(`rm -f ${fornaxCommand.shellQuote(file)}`))) return;
     }
-    log('[Electron] Removed the kiln command at', file);
+    log('[Electron] Removed the fornax command at', file);
     removed.push(file);
   }
-  const others = left.length ? `\n\nLeft ${left.map(tilde).join(' and ')} alone: Kiln Studio didn't install it.` : '';
+  const others = left.length ? `\n\nLeft ${left.map(tilde).join(' and ')} alone: Fornax Studio didn't install it.` : '';
   await dialog.showMessageBox({
     type: 'info',
-    message: removed.length ? 'The kiln command is uninstalled' : 'Kiln Studio hasn\'t installed a kiln command',
-    detail: (removed.length ? `Removed ${removed.map(tilde).join(' and ')}.` : `There is no kiln command of Kiln Studio's in ${targets.map(t => tilde(t.dir)).join(' or ')}.`) + others,
+    message: removed.length ? 'The fornax command is uninstalled' : 'Fornax Studio hasn\'t installed a fornax command',
+    detail: (removed.length ? `Removed ${removed.map(tilde).join(' and ')}.` : `There is no fornax command of Fornax Studio's in ${targets.map(t => tilde(t.dir)).join(' or ')}.`) + others,
   });
 }
 
@@ -349,7 +353,7 @@ app.whenReady().then(async () => {
     await startServer();
   } catch (error) {
     logError('[Electron] Failed to start:', error);
-    dialog.showErrorBox('Kiln Studio could not start', `${error.message}\n\nThe log is at ${logPath}.`);
+    dialog.showErrorBox('Fornax Studio could not start', `${error.message}\n\nThe log is at ${logPath}.`);
     app.quit();
     return;
   }
@@ -374,7 +378,7 @@ app.on('before-quit', () => {
   }
   if (backendProcess) {
     // SIGTERM: the backend's shutdown hook unloads every model first.
-    log('[Electron] Stopping the Kiln backend');
+    log('[Electron] Stopping the Fornax backend');
     backendProcess.kill('SIGTERM');
   }
   log('[Electron] App quitting');

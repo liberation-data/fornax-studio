@@ -1,12 +1,12 @@
 name: macOS signed build
 
 # Builds, signs (Developer ID Application) and notarizes the macOS Studio app with electron-builder + Apple notarytool,
-# carrying Kiln's backend, the engines' Metal libraries and a Java runtime of its own (kiln-backend.yml builds those,
+# carrying Fornax's backend, the engines' Metal libraries and a Java runtime of its own (fornax-backend.yml builds those,
 # in a job of its own with no Apple secret in reach).
 #
 # All signing secrets come from the `apple-signing` GitHub Environment (deployment branches limited to main and v*
 # tags). The signing job below declares `environment: apple-signing`, so the secrets are only ever exposed to that job
-# and only on those refs. The backend job sees only KILN_DEPLOY_KEY, to read the Kiln repository.
+# and only on those refs. The backend job sees only KILN_DEPLOY_KEY, to read the Fornax repository.
 #
 # PER-ARCH, NOT UNIVERSAL. The engines' .dylib files and the jlink'd Java runtime are built for one architecture each,
 # on a runner of that architecture; a universal (lipo) app would need both merged file by file. So arm64 and x64 are
@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   backend:
-    name: Kiln backend (${{ matrix.arch }})
+    name: Fornax backend (${{ matrix.arch }})
     # A newer manual run replaces an older one, but a release run is never cancelled.
     concurrency:
       group: macos-backend-${{ github.event.release.tag_name || github.ref }}-${{ matrix.arch }}
@@ -47,11 +47,11 @@ jobs:
             runner: macos-15
           - arch: x64
             runner: macos-15-intel
-    uses: ./.github/workflows/kiln-backend.yml
+    uses: ./.github/workflows/fornax-backend.yml
     with:
       runner: ${{ matrix.runner }}
       backend: metal
-      artifact: kiln-studio-server-macos-${{ matrix.arch }}
+      artifact: fornax-studio-server-macos-${{ matrix.arch }}
     secrets:
       KILN_DEPLOY_KEY: ${{ secrets.KILN_DEPLOY_KEY }}
 
@@ -92,7 +92,7 @@ jobs:
       - name: Download the backend
         uses: actions/download-artifact@v4
         with:
-          name: kiln-studio-server-macos-${{ matrix.arch }}
+          name: fornax-studio-server-macos-${{ matrix.arch }}
           path: ${{ runner.temp }}/backend
 
       - name: Unpack the backend into server/
@@ -155,16 +155,16 @@ jobs:
           echo "java's entitlements:"
           codesign -d --entitlements - "$server/jre/bin/java"
 
-      # The signed java, under the hardened runtime, must start Kiln's backend: a JIT without its entitlement, or a
+      # The signed java, under the hardened runtime, must start Fornax's backend: a JIT without its entitlement, or a
       # library the runtime won't load, fails here rather than on a user's first launch. Stubbed: no models here.
       - name: Check the signed backend starts
         run: |
           set -euo pipefail
           APP="$(ls -d dist/mac*/*.app | head -n 1)"
           server="$APP/Contents/Resources/server"
-          KILN_STUDIO_PORT=5191 KILN_STUDIO_STUB=chat,image,song KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+          FORNAX_STUDIO_PORT=5191 FORNAX_STUDIO_STUB=chat,image,song FORNAX_STUDIO_HOME="$RUNNER_TEMP/fornax-studio" \
             "$server/jre/bin/java" --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true \
-            "-Dkiln.library.path=$server/native" -jar "$server/kiln-studio-server.jar" > "$RUNNER_TEMP/backend.log" 2>&1 &
+            "-Dfornax.library.path=$server/native" -jar "$server/fornax-studio-server.jar" > "$RUNNER_TEMP/backend.log" 2>&1 &
           pid=$!
           for _ in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:5191/api/health; then echo; kill "$pid"; exit 0; fi
@@ -175,22 +175,22 @@ jobs:
           cat "$RUNNER_TEMP/backend.log"
           exit 1
 
-      # The kiln command the app installs, on the signed java under the hardened runtime. Skipped when this Kiln has no
-      # kiln-cli.
-      - name: Check the kiln command runs on the signed runtime
+      # The fornax command the app installs, on the signed java under the hardened runtime. Skipped when this Fornax has no
+      # fornax-cli.
+      - name: Check the fornax command runs on the signed runtime
         run: |
           set -euo pipefail
           APP="$(ls -d dist/mac*/*.app | head -n 1)"
           server="$APP/Contents/Resources/server"
-          if [ ! -d "$server/kiln-cli" ]; then echo "No kiln command in this build"; exit 0; fi
-          export KILN_JAVA="$server/jre/bin/java" KILN_CLI_LIB="$server/kiln-cli/lib" KILN_LIBRARY_PATH="$server/native"
-          env -u JAVA_HOME sh "$server/kiln-cli/bin/kiln" --version
-          HF_HUB_CACHE="$RUNNER_TEMP/hf" env -u JAVA_HOME sh "$server/kiln-cli/bin/kiln" list
+          if [ ! -d "$server/fornax-cli" ]; then echo "No fornax command in this build"; exit 0; fi
+          export FORNAX_JAVA="$server/jre/bin/java" FORNAX_CLI_LIB="$server/fornax-cli/lib" FORNAX_LIBRARY_PATH="$server/native"
+          env -u JAVA_HOME sh "$server/fornax-cli/bin/fornax" --version
+          HF_HUB_CACHE="$RUNNER_TEMP/hf" env -u JAVA_HOME sh "$server/fornax-cli/bin/fornax" list
 
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kiln-studio-macos-${{ matrix.arch }}-signed
+          name: fornax-studio-macos-${{ matrix.arch }}-signed
           path: |
             dist/*.dmg
             dist/*.zip
@@ -212,7 +212,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: kiln-studio-macos-*-signed
+          pattern: fornax-studio-macos-*-signed
           merge-multiple: true
           path: assets
       # --clobber, so re-running a failed release run replaces the assets.

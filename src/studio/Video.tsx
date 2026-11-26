@@ -75,7 +75,7 @@ export function videoPhase(p: VideoProgress | null, state: LoadStatus['state'] |
 export function VideoWindow() {
   const { chosen, refresh } = useStudio()
   const model = chosen('video')
-  const [prompt, setPrompt] = useState('A slow push in on a potter at a wheel, clay spinning, warm light from a kiln behind, the hum of the wheel')
+  const [prompt, setPrompt] = useState('A slow push in on a potter at a wheel, clay spinning, warm light from a fornax behind, the hum of the wheel')
   const [image, setImage] = useState<{ name: string; url: string } | null>(null)
   const [width, setWidth] = useState(672)
   const [height, setHeight] = useState(448)
@@ -219,7 +219,7 @@ export function VideoWindow() {
   return (
     <div className="studio-window">
       <StubNotice kind="video" />
-      <Split side={form} size={360} remember="kiln-studio.video" label="Resize the settings">
+      <Split side={form} size={360} remember="fornax-studio.video" label="Resize the settings">
         <div className="studio-output">
           {problem && <p className="studio-failure">{problem}</p>}
           {busy ? (

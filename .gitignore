@@ -6,7 +6,7 @@ next-env.d.ts
 .env*.local
 .DS_Store
 dist/
-# Built from the Kiln checkout by npm run server:build
+# Built from the Fornax checkout by npm run server:build
 /server/
 # Written by next dev
 AGENTS.md

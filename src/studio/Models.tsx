@@ -41,7 +41,7 @@ function state(m: Model, pending: boolean): { color: 'green' | 'amber' | 'off' |
   return { color: 'off', words: 'In the cache' }
 }
 
-/** The models Kiln can run from the Hugging Face cache, which are loaded, and the memory they hold. */
+/** The models Fornax can run from the Hugging Face cache, which are loaded, and the memory they hold. */
 export function Models() {
   const { status, problem, refresh, load, unload, pending } = useStudio()
 
@@ -95,15 +95,15 @@ export function Models() {
       footer={status && <p className="studio-footnote desk-text-caption desk-text-muted">Hugging Face cache: {status.cacheRoot}</p>}
     >
       <div className="studio-models">
-        {problem && <p className="studio-failure">Kiln&apos;s backend is not answering: {problem}</p>}
+        {problem && <p className="studio-failure">Fornax&apos;s backend is not answering: {problem}</p>}
         {status && (
           <Section title="Memory">
             <div className="studio-meters">
-              <Meter label={`Loaded by Kiln (${loaded.length} model${loaded.length === 1 ? '' : 's'}, estimated from the weights)`} used={status.loadedBytes} total={status.budgetBytes} />
+              <Meter label={`Loaded by Fornax (${loaded.length} model${loaded.length === 1 ? '' : 's'}, estimated from the weights)`} used={status.loadedBytes} total={status.budgetBytes} />
               {gpuMeters(status.gpu)}
             </div>
             <p className="desk-text-small desk-text-muted">
-              Kiln&apos;s pool keeps models loaded between uses within its budget, unloading the least recently used to make room, and any idle for a while.
+              Fornax&apos;s pool keeps models loaded between uses within its budget, unloading the least recently used to make room, and any idle for a while.
             </p>
           </Section>
         )}
@@ -113,7 +113,7 @@ export function Models() {
             rows={status?.models ?? []}
             columns={columns}
             rowId={m => m.id}
-            empty={status ? 'Nothing in the cache that Kiln can run. Download a GGUF with `hf download`.' : 'Reading the cache…'}
+            empty={status ? 'Nothing in the cache that Fornax can run. Download a GGUF with `hf download`.' : 'Reading the cache…'}
           />
         </Section>
       </div>

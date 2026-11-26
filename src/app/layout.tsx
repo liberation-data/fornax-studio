@@ -5,8 +5,8 @@ import '../studio/theme.css'
 import '../studio/studio.css'
 
 export const metadata: Metadata = {
-  title: 'Kiln Studio',
-  description: 'Try models with Kiln: chat, images, songs, video and vision, on your GPU, in one JVM.',
+  title: 'Fornax Studio',
+  description: 'Try models with Fornax: chat, images, songs, video and vision, on your GPU, in one JVM.',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

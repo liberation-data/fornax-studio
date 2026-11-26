@@ -314,7 +314,7 @@ export function InspectWindow() {
   return (
     <div className="studio-window">
       <StubNotice kind="vision" />
-      <Split side={form} size={380} remember="kiln-studio.inspect" label="Resize the settings">
+      <Split side={form} size={380} remember="fornax-studio.inspect" label="Resize the settings">
         <div className="studio-output">
           <div className="studio-chat-stats" aria-live="off">
             <Figures items={busy

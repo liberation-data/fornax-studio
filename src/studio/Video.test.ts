@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { clipSize, framesAllowed, longClip, videoPhase, videoRequest } from './Video'
 
 const form = {
-  prompt: ' a kiln at dusk ', image: null, width: 672, height: 448, frames: 49, fps: 24, steps: 8, cfg: 1, seed: '', twoStage: true, audio: true,
+  prompt: ' a fornax at dusk ', image: null, width: 672, height: 448, frames: 49, fps: 24, steps: 8, cfg: 1, seed: '', twoStage: true, audio: true,
 }
 
 describe('videoRequest', () => {
   it('leaves the steps to the two-stage recipe, and sends no image when there is none', () => {
     expect(videoRequest('video:ltx-2.5-distilled', form)).toEqual({
-      model: 'video:ltx-2.5-distilled', prompt: 'a kiln at dusk', width: 672, height: 448, frames: 49, fps: 24, cfg: 1, seed: -1,
+      model: 'video:ltx-2.5-distilled', prompt: 'a fornax at dusk', width: 672, height: 448, frames: 49, fps: 24, cfg: 1, seed: -1,
       twoStage: true, audio: true,
     })
   })

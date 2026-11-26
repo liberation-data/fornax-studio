@@ -23,7 +23,7 @@ export function imageRequest(model: string, form: { prompt: string; width: numbe
 export function ImageWindow() {
   const { chosen, refresh } = useStudio()
   const model = chosen('image')
-  const [prompt, setPrompt] = useState('A neon sign that says KILN over a pottery studio at night, rain on the window')
+  const [prompt, setPrompt] = useState('A neon sign that says FORNAX over a bakery at night, rain on the window')
   const [width, setWidth] = useState(768)
   const [height, setHeight] = useState(768)
   const [steps, setSteps] = useState(12)
@@ -115,7 +115,7 @@ export function ImageWindow() {
   return (
     <div className="studio-window">
       <StubNotice kind="image" />
-      <Split side={form} size={340} remember="kiln-studio.image" label="Resize the settings">
+      <Split side={form} size={340} remember="fornax-studio.image" label="Resize the settings">
         <div className="studio-output">
           {problem && <p className="studio-failure">{problem}</p>}
           {busy ? (

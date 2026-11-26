@@ -1,5 +1,5 @@
 /*
- * Kiln's colours: fired clay, ember and soot, in place of the desk's own. Light and dark follow the system, as the
+ * Fornax's colours: fired clay, ember and soot, in place of the desk's own. Light and dark follow the system, as the
  * desk's do, or the page's `data-theme` when it is set. The selectors are the desk's, so this sheet, loaded after it,
  * wins without raising anything's specificity.
  */
@@ -24,7 +24,7 @@
   --desk-shadow: 0 1px 2px rgb(22 14 11 / 8%), 0 12px 32px rgb(22 14 11 / 18%);
   --desk-shadow-floating: 0 2px 4px rgb(22 14 11 / 10%), 0 24px 60px rgb(22 14 11 / 34%);
 
-  /* The kiln behind the windows: a glow from its mouth, under brickwork. */
+  /* The fornax behind the windows: a glow from its mouth, under brickwork. */
   --studio-glow: rgb(242 107 29 / 55%);
   --studio-brick: rgb(255 255 255 / 5%);
   --studio-frost: rgb(251 246 242 / 72%);
@@ -75,7 +75,7 @@
 }
 
 /*
- * The kiln: soot-dark brickwork (courses of mortar every 28px, joints staggered a half-brick each course), lit from
+ * The fornax: soot-dark brickwork (courses of mortar every 28px, joints staggered a half-brick each course), lit from
  * below by the glow of its mouth. Drawn the same in both schemes, as Drivine's water is: it is the place, not a colour.
  */
 .studio-screen .desk-stage { background: none; }
@@ -100,9 +100,9 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 22%), 0 1px 14px rgb(0 0 0 / 30%);
 }
 
-/* Kiln's mark before the studio's menu: a kiln's arch with a flame in its mouth. */
+/* Fornax's mark before the studio's menu: a fornax's arch with a flame in its mouth. */
 .studio-mark {
   display: block; width: 20px; height: 20px; margin-inline-end: 2px; background: var(--desk-ink);
-  --studio-kiln: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 21V11a9 9 0 0 1 18 0v10h-3v-9a6 6 0 0 0-12 0v9z'/%3E%3Cpath d='M12 21c-2.2 0-3.5-1.5-3.5-3.3 0-2.3 2.2-3.2 2.6-5.7 1.9 1.2 4.4 3.4 4.4 5.9 0 1.8-1.3 3.1-3.5 3.1z'/%3E%3C/svg%3E");
-  mask: var(--studio-kiln) center / contain no-repeat; -webkit-mask: var(--studio-kiln) center / contain no-repeat;
+  --studio-fornax: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 21V11a9 9 0 0 1 18 0v10h-3v-9a6 6 0 0 0-12 0v9z'/%3E%3Cpath d='M12 21c-2.2 0-3.5-1.5-3.5-3.3 0-2.3 2.2-3.2 2.6-5.7 1.9 1.2 4.4 3.4 4.4 5.9 0 1.8-1.3 3.1-3.5 3.1z'/%3E%3C/svg%3E");
+  mask: var(--studio-fornax) center / contain no-repeat; -webkit-mask: var(--studio-fornax) center / contain no-repeat;
 }

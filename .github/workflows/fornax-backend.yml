@@ -1,16 +1,16 @@
-name: Kiln backend
+name: Fornax backend
 
-# What the packaged app runs beside Electron, built for one platform: Kiln's backend (kiln-studio-server.jar), the
+# What the packaged app runs beside Electron, built for one platform: Fornax's backend (fornax-studio-server.jar), the
 # engines' native libraries it loads through FFM, and a Java runtime jlink'd for it, so the app needs no Java of its
 # own. Called by linux-build.yml and macos-signed.yml, once per platform; it leaves server/ as a tar (a tar, as an
 # artifact alone would drop the executable bits of jre/bin/java) for their packaging jobs to unpack.
 #
-# NO SIGNING SECRETS. This job builds third-party C++ (llama.cpp, stable-diffusion.cpp, acestep.cpp, yue2.cpp, fetched by Kiln's
-# native/build.sh at the commits Kiln pins) and runs Gradle, so it is kept apart from the job that may see the Apple
-# certificate: it runs in no environment, and is handed only the read-only deploy key for the Kiln repository.
+# NO SIGNING SECRETS. This job builds third-party C++ (llama.cpp, stable-diffusion.cpp, acestep.cpp, yue2.cpp, fetched by Fornax's
+# native/build.sh at the commits Fornax pins) and runs Gradle, so it is kept apart from the job that may see the Apple
+# certificate: it runs in no environment, and is handed only the read-only deploy key for the Fornax repository.
 #
-# WHICH KILN. Kiln is private, at liberation-data/kiln. The commit built is the one in kiln.ref, so a release builds
-# the same backend however much later it is re-run; bump kiln.ref to take a newer Kiln.
+# WHICH FORNAX. Fornax is private, at liberation-data/fornax. The commit built is the one in fornax.ref, so a release builds
+# the same backend however much later it is re-run; bump fornax.ref to take a newer Fornax.
 
 on:
   workflow_call:
@@ -29,7 +29,7 @@ on:
         required: true
     secrets:
       KILN_DEPLOY_KEY:
-        description: A read-only deploy key of liberation-data/kiln (its private half)
+        description: A read-only deploy key of liberation-data/fornax (its private half)
         required: true
 
 permissions:
@@ -53,18 +53,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Which Kiln
-        id: kiln
-        run: echo "ref=$(tr -d '[:space:]' < kiln.ref)" >> "$GITHUB_OUTPUT"
+      - name: Which Fornax
+        id: fornax
+        run: echo "ref=$(tr -d '[:space:]' < fornax.ref)" >> "$GITHUB_OUTPUT"
 
       # The deploy key is used here only, and not kept in the checkout's git config (persist-credentials: false), so
       # nothing after this step, Gradle or the engines' builds, can use it.
-      - name: Checkout Kiln
+      - name: Checkout Fornax
         uses: actions/checkout@v4
         with:
-          repository: liberation-data/kiln
-          ref: ${{ steps.kiln.outputs.ref }}
-          path: kiln
+          repository: liberation-data/fornax
+          ref: ${{ steps.fornax.outputs.ref }}
+          path: fornax
           ssh-key: ${{ secrets.KILN_DEPLOY_KEY }}
           persist-credentials: false
 
@@ -99,13 +99,13 @@ jobs:
         id: natives
         uses: actions/cache@v4
         with:
-          path: kiln/build/native
-          key: natives-${{ runner.os }}-${{ runner.arch }}-${{ inputs.backend }}-${{ env.VULKAN_SDK_VERSION }}-${{ hashFiles('kiln/native/**', 'kiln/kiln-llama/native/**', 'kiln/kiln-acestep/native/**', 'kiln/kiln-yue2/native/**') }}
+          path: fornax/build/native
+          key: natives-${{ runner.os }}-${{ runner.arch }}-${{ inputs.backend }}-${{ env.VULKAN_SDK_VERSION }}-${{ hashFiles('fornax/native/**', 'fornax/fornax-llama/native/**', 'fornax/fornax-acestep/native/**', 'fornax/fornax-yue2/native/**') }}
 
       # Every engine the studio runs: chat, images and video, ACE-Step and YuE2 songs.
       - name: Build the native libraries
         if: steps.natives.outputs.cache-hit != 'true'
-        working-directory: kiln
+        working-directory: fornax
         run: |
           set -euo pipefail
           if [ -n "${VULKAN_SDK_VERSION:-}" ]; then
@@ -121,9 +121,9 @@ jobs:
 
       - name: Build the backend and its Java runtime
         env:
-          KILN_HOME: kiln
-          KILN_BACKEND: ${{ inputs.backend }}
-          KILN_STUDIO_REQUIRE_NATIVE: '1'
+          FORNAX_HOME: fornax
+          FORNAX_BACKEND: ${{ inputs.backend }}
+          FORNAX_STUDIO_REQUIRE_NATIVE: '1'
         run: |
           set -euo pipefail
           scripts/build-server.sh
@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           ls -l server/native
-          for lib in libkiln_llama libstable-diffusion libkiln_acestep libkiln_yue2; do
+          for lib in libfornax_llama libstable-diffusion libfornax_acestep libfornax_yue2; do
             [ -f server/native/"$lib".so ] || [ -f server/native/"$lib".dylib ] || { echo "::error::no $lib in server/native"; exit 1; }
           done
           count=$(ls server/native | grep -cE '\.(so|dylib)$')
@@ -163,9 +163,9 @@ jobs:
       - name: Check the backend starts on its runtime
         run: |
           set -euo pipefail
-          KILN_ALLOW_CPU=true KILN_STUDIO_PORT=5191 KILN_STUDIO_STUB=chat,image,song,video KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+          FORNAX_ALLOW_CPU=true FORNAX_STUDIO_PORT=5191 FORNAX_STUDIO_STUB=chat,image,song,video FORNAX_STUDIO_HOME="$RUNNER_TEMP/fornax-studio" \
             server/jre/bin/java --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true \
-            -Dkiln.library.path=server/native -jar server/kiln-studio-server.jar > "$RUNNER_TEMP/backend.log" 2>&1 &
+            -Dfornax.library.path=server/native -jar server/fornax-studio-server.jar > "$RUNNER_TEMP/backend.log" 2>&1 &
           pid=$!
           for _ in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:5191/api/health; then echo; kill "$pid"; exit 0; fi
@@ -176,16 +176,16 @@ jobs:
           cat "$RUNNER_TEMP/backend.log"
           exit 1
 
-      # The kiln command, when this Kiln has kiln-cli: its launcher, on the runtime built for the app (a module jlink left
+      # The fornax command, when this Fornax has fornax-cli: its launcher, on the runtime built for the app (a module jlink left
       # out fails here), with the app's natives.
-      - name: Check the kiln command runs on the runtime
+      - name: Check the fornax command runs on the runtime
         run: |
           set -euo pipefail
-          if [ ! -d server/kiln-cli ]; then echo "No kiln-cli in this Kiln: the app is built without the kiln command"; exit 0; fi
-          ls -l server/kiln-cli/lib
-          export KILN_JAVA="$PWD/server/jre/bin/java" KILN_CLI_LIB="$PWD/server/kiln-cli/lib" KILN_LIBRARY_PATH="$PWD/server/native"
-          env -u JAVA_HOME sh server/kiln-cli/bin/kiln --version
-          HF_HUB_CACHE="$RUNNER_TEMP/hf" env -u JAVA_HOME sh server/kiln-cli/bin/kiln list
+          if [ ! -d server/fornax-cli ]; then echo "No fornax-cli in this Fornax: the app is built without the fornax command"; exit 0; fi
+          ls -l server/fornax-cli/lib
+          export FORNAX_JAVA="$PWD/server/jre/bin/java" FORNAX_CLI_LIB="$PWD/server/fornax-cli/lib" FORNAX_LIBRARY_PATH="$PWD/server/native"
+          env -u JAVA_HOME sh server/fornax-cli/bin/fornax --version
+          HF_HUB_CACHE="$RUNNER_TEMP/hf" env -u JAVA_HOME sh server/fornax-cli/bin/fornax list
 
       - name: Pack server/
         run: tar -C server -cf server.tar .
