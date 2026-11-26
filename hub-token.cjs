@@ -40,11 +40,14 @@ function tokenStore({ dir, safeStorage }) {
   };
 }
 
-/** Gives the backend the token (null clears it); resolves to whether the backend has one now. */
-async function sendToken(backend, token, fetchImpl = fetch) {
+/**
+ * Gives the backend the token (null clears it), with the launch's secret, which the backend requires once it has one;
+ * resolves to whether the backend has a token now.
+ */
+async function sendToken(backend, token, secret, fetchImpl = fetch) {
   const res = await fetchImpl(`${backend}/api/hub/token`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...(secret ? { 'x-fornax-studio-secret': secret } : {}) },
     body: JSON.stringify({ token: token ?? null }),
   });
   if (!res.ok) throw new Error(`the backend refused the token (HTTP ${res.status})`);

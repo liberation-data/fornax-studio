@@ -70,7 +70,7 @@ describe('sendToken', () => {
       let body = ''
       req.on('data', c => (body += c))
       req.on('end', () => {
-        seen.push([req.method, req.url, JSON.parse(body)])
+        seen.push([req.method, req.url, JSON.parse(body), req.headers['x-fornax-studio-secret'] ?? null])
         res.setHeader('content-type', 'application/json')
         res.end(JSON.stringify({ tokenSet: JSON.parse(body).token != null }))
       })
@@ -78,9 +78,9 @@ describe('sendToken', () => {
     await new Promise(r => server.listen(0, '127.0.0.1', r))
     const backend = `http://127.0.0.1:${server.address().port}`
     try {
-      expect(await sendToken(backend, 'hf_secret_token')).toBe(true)
+      expect(await sendToken(backend, 'hf_secret_token', 'launch-secret')).toBe(true)
       expect(await sendToken(backend, null)).toBe(false)
-      expect(seen).toEqual([['POST', '/api/hub/token', { token: 'hf_secret_token' }], ['POST', '/api/hub/token', { token: null }]])
+      expect(seen).toEqual([['POST', '/api/hub/token', { token: 'hf_secret_token' }, 'launch-secret'], ['POST', '/api/hub/token', { token: null }, null]])
     } finally {
       server.close()
     }
@@ -88,7 +88,7 @@ describe('sendToken', () => {
 
   it('throws when the backend refuses it, without the token in the message', async () => {
     const refusing = async () => ({ ok: false, status: 400, json: async () => ({}) })
-    const error = await sendToken('http://127.0.0.1:1', 'hf_secret_token', refusing).catch(e => e)
+    const error = await sendToken('http://127.0.0.1:1', 'hf_secret_token', undefined, refusing).catch(e => e)
     expect(error.message).toBe('the backend refused the token (HTTP 400)')
     expect(error.message).not.toContain('hf_secret_token')
   })

@@ -15,6 +15,10 @@ const URL = `http://localhost:${PORT}`;
 const BACKEND_PORT = process.env.FORNAX_STUDIO_PORT ?? '5191';
 const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 const isDev = process.env.ELECTRON_DEV === '1';
+// A secret for this launch: the backend answers only requests that carry it (the studio's server adds it, and so does
+// this process), so a web page in the user's browser can't drive the backend on 127.0.0.1.
+// In development the studio's server runs on its own (npm run dev) and doesn't have it, so there is none.
+const SECRET = isDev ? null : require('crypto').randomBytes(32).toString('hex');
 const HOME = process.env.FORNAX_STUDIO_HOME ?? keptFromKiln(path.join(os.homedir(), '.fornax-studio'), path.join(os.homedir(), '.kiln-studio'));
 
 // A log file, since a packaged app has no terminal to write to.
@@ -78,7 +82,7 @@ async function startBackend() {
     throw new Error(`Another server already answers at ${BACKEND}. Stop it, or set FORNAX_STUDIO_PORT to a free port.`);
   }
   const roots = appRoots();
-  const { command, args, env } = backendCommand({ roots, port: BACKEND_PORT, parentPid: process.pid });
+  const { command, args, env } = backendCommand({ roots, port: BACKEND_PORT, parentPid: process.pid, secret: SECRET });
   log('[Electron] Starting the Fornax backend:', command, args.join(' '));
   backendProcess = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
   backendProcess.stdout.on('data', data => log('[fornax]', data.toString().trim()));
@@ -113,7 +117,7 @@ async function startServer() {
   // Electron's utilityProcess runs it in Electron's own Node, so no separate Node is needed.
   serverProcess = utilityProcess.fork(serverPath, [], {
     cwd: serverCwd,
-    env: { ...process.env, PORT, HOSTNAME: 'localhost', FORNAX_STUDIO_SERVER: BACKEND },
+    env: { ...process.env, PORT, HOSTNAME: 'localhost', FORNAX_STUDIO_SERVER: BACKEND, ...(SECRET ? { FORNAX_STUDIO_SECRET: SECRET } : {}) },
     stdio: 'pipe',
   });
   serverProcess.stdout.on('data', data => log('[Next.js]', data.toString().trim()));
@@ -359,7 +363,7 @@ ipcMain.handle('studio:hub-token', event => {
 ipcMain.handle('studio:hub-token-save', async (event, token) => {
   if (!fromStudio(event) || !hubTokens || (token != null && typeof token !== 'string')) return null;
   const set = hubTokens.save(token);
-  await sendToken(BACKEND, set ? hubTokens.read() : null);
+  await sendToken(BACKEND, set ? hubTokens.read() : null, SECRET);
   return { set, usable: hubTokens.usable() };
 });
 
@@ -369,7 +373,7 @@ app.whenReady().then(async () => {
     await startBackend();
     hubTokens = tokenStore({ dir: app.getPath('userData'), safeStorage });
     const token = hubTokens.read();
-    if (token) await sendToken(BACKEND, token).catch(error => logError('[Electron] Could not give the backend the Hugging Face token:', error.message));
+    if (token) await sendToken(BACKEND, token, SECRET).catch(error => logError('[Electron] Could not give the backend the Hugging Face token:', error.message));
     await startServer();
   } catch (error) {
     logError('[Electron] Failed to start:', error);

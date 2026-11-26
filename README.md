@@ -79,6 +79,13 @@ streamed as server-sent events, models kept in Fornax's `ModelPool`. The page ta
 passes `/api/*` on as it is, so the browser app works the same from `npm start`. The backend is told the app's pid and
 exits with it, so a model never stays on the GPU after the app has gone.
 
+Listening on loopback doesn't keep out web pages in your browser, so both servers check who is calling. The studio's
+server answers `/api/*` only for a loopback `Host` (not a DNS-rebound name), an `Origin` that is its own, and a
+`Sec-Fetch-Site` of `same-origin` or `none`. The backend refuses any `Origin` and any non-loopback `Host`. The app also
+makes a secret each launch and passes it, in the environment, to both servers as `FORNAX_STUDIO_SECRET`. The studio's
+server adds it to every request it passes on, and the backend refuses a request without it. `npm run electron:dev` makes
+no secret, so it works with a backend and dev server started on their own.
+
 ## Running it
 
 Needs Node 22+, Java 25, and Fornax's native libraries (`native/build.sh` in the Fornax checkout).
@@ -115,6 +122,7 @@ Settings, from the environment:
 | `FORNAX_CLI_HOME` | for `npm run server:build`: the Fornax checkout to build the fornax command from (default `FORNAX_HOME`) |
 | `FORNAX_STUDIO_JAR`, `FORNAX_LIBRARY_PATH`, `FORNAX_STUDIO_JAVA` | to run another backend jar, libraries or Java |
 | `PORT`, `FORNAX_STUDIO_PORT` | the page's and the backend's ports (5190, 5191) |
+| `FORNAX_STUDIO_SECRET` | set by the app each launch; when set, the backend answers only requests that carry it, and the studio's server adds it |
 
 `npm run package:linux` packs the app with electron-builder, with the backend jar, the native libraries and, after
 `npm run server:jre`, a Java runtime as resources (in `server/`). `server:jre` jlinks one from the JDK at `JAVA_HOME`
