@@ -1,4 +1,4 @@
-/** What the studio's page asks of Kiln's backend, through the studio's own server (/api/* is passed on as it is). */
+/** What the studio's page asks of Fornax's backend, through the studio's own server (/api/* is passed on as it is). */
 
 export type Kind = 'chat' | 'image' | 'song' | 'video' | 'vision'
 

@@ -14,7 +14,7 @@ type Mode = 'chat' | 'tools'
 /** One turn as the window keeps it: what was said, and for a reply, how it was made. */
 interface Turn {
   id: string
-  from: 'me' | 'kiln'
+  from: 'me' | 'fornax'
   text: string
   /** The reasoning, when the engine gave it apart from the text (chatJson's reasoning_content). */
   reasoning?: string
@@ -66,7 +66,7 @@ function Reply({ turn, showThinking }: { turn: Turn; showThinking: boolean }) {
 const TOOLS_SYSTEM = 'You have tools. For any arithmetic, call calculate; for the date or time, call get_current_time. Never work these out yourself.'
 
 const SUGGESTIONS: Record<Mode, string[]> = {
-  chat: ['Write a haiku about a kiln.', 'Explain what a GGUF file is, in two sentences.', 'Name three uses for a pottery kiln.'],
+  chat: ['Write a haiku about a fornax.', 'Explain what a GGUF file is, in two sentences.', 'Name three uses for a pottery kiln.'],
   tools: ['What is (17 + 4) * 3 / 2?', 'What time is it in Tokyo right now?', 'What is 2^20, and what is the time in London?'],
 }
 
@@ -89,7 +89,7 @@ function Conversation({ mode, think }: { mode: Mode; think: boolean }) {
   const send = useCallback(async (text: string) => {
     if (!model || busy || !text.trim()) return
     const mine: Turn = { id: crypto.randomUUID(), from: 'me', text }
-    const reply: Turn = { id: crypto.randomUUID(), from: 'kiln', text: '', streaming: true, ...(mode === 'tools' ? { tools: [] } : {}) }
+    const reply: Turn = { id: crypto.randomUUID(), from: 'fornax', text: '', streaming: true, ...(mode === 'tools' ? { tools: [] } : {}) }
     const sent = [...turns, mine]
     setTurns([...sent, reply])
     setDraft('')
@@ -146,7 +146,7 @@ function Conversation({ mode, think }: { mode: Mode; think: boolean }) {
   const messages = useMemo<ThreadMessage[]>(() => turns.map(t => ({
     id: t.id,
     from: t.from,
-    authorName: t.from === 'me' ? 'You' : model?.name ?? 'Kiln',
+    authorName: t.from === 'me' ? 'You' : model?.name ?? 'Fornax',
     body: t.from === 'me' ? <p className="studio-answer">{t.text}</p> : <Reply turn={t} showThinking={think || mode === 'tools'} />,
     state: t.failed && t.failed !== 'Stopped.' ? 'failed' : 'sent',
   })), [turns, model, think, mode])

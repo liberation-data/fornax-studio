@@ -1,9 +1,9 @@
 name: Linux build
 
-# Builds the Linux Studio app with electron-builder: a .deb and an .rpm, x64, carrying Kiln's backend, the engines'
-# Vulkan libraries and a Java runtime of its own (kiln-backend.yml builds those). Nothing is signed: Linux has no
+# Builds the Linux Studio app with electron-builder: a .deb and an .rpm, x64, carrying Fornax's backend, the engines'
+# Vulkan libraries and a Java runtime of its own (fornax-backend.yml builds those). Nothing is signed: Linux has no
 # Gatekeeper or SmartScreen to satisfy, so this needs no signing secrets and no environment; only KILN_DEPLOY_KEY, to
-# read the Kiln repository, in the backend job.
+# read the Fornax repository, in the backend job.
 #
 # - By hand (workflow_dispatch), and on a pull request that changes the packaging: builds, checks, and keeps the
 #   packages as the run's artifacts.
@@ -20,15 +20,15 @@ on:
   pull_request:
     paths:
       - .github/workflows/linux-build.yml
-      - .github/workflows/kiln-backend.yml
-      - kiln.ref
+      - .github/workflows/fornax-backend.yml
+      - fornax.ref
       - package.json
       - package-lock.json
       - next.config.ts
       - main.cjs
       - preload.cjs
       - server-start.cjs
-      - kiln-command.cjs
+      - fornax-command.cjs
       - build/**
       - scripts/**
 
@@ -39,16 +39,16 @@ permissions:
 
 jobs:
   backend:
-    name: Kiln backend (x64)
+    name: Fornax backend (x64)
     # A newer run replaces an older one on the same ref, but a release run is never cancelled.
     concurrency:
       group: linux-backend-${{ github.event.release.tag_name || github.ref }}
       cancel-in-progress: ${{ github.event_name != 'release' }}
-    uses: ./.github/workflows/kiln-backend.yml
+    uses: ./.github/workflows/fornax-backend.yml
     with:
       runner: ubuntu-24.04
       backend: vulkan
-      artifact: kiln-studio-server-linux-x64
+      artifact: fornax-studio-server-linux-x64
     secrets:
       KILN_DEPLOY_KEY: ${{ secrets.KILN_DEPLOY_KEY }}
 
@@ -84,7 +84,7 @@ jobs:
       - name: Download the backend
         uses: actions/download-artifact@v4
         with:
-          name: kiln-studio-server-linux-x64
+          name: fornax-studio-server-linux-x64
           path: ${{ runner.temp }}/backend
 
       - name: Unpack the backend into server/
@@ -101,8 +101,8 @@ jobs:
         run: |
           set -euo pipefail
           server=dist/linux-unpacked/resources/server
-          test -f "$server/kiln-studio-server.jar"
-          for lib in libkiln_llama libstable-diffusion libkiln_acestep; do test -f "$server/native/$lib.so"; done
+          test -f "$server/fornax-studio-server.jar"
+          for lib in libfornax_llama libstable-diffusion libfornax_acestep; do test -f "$server/native/$lib.so"; done
           test -x "$server/jre/bin/java"
           "$server/jre/bin/java" -version
 
@@ -124,22 +124,22 @@ jobs:
             > "$RUNNER_TEMP/dnf.log" 2>&1 || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
           grep -E '^ *mesa-vulkan-drivers ' "$RUNNER_TEMP/dnf.log" || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
 
-      # The .deb writes /usr/bin/kiln, the kiln command on the app's own Java, and removing it takes that away. Installed
-      # for real here, then removed. Skipped when this Kiln has no kiln-cli.
-      - name: Check the .deb installs and removes the kiln command
+      # The .deb writes /usr/bin/fornax, the fornax command on the app's own Java, and removing it takes that away. Installed
+      # for real here, then removed. Skipped when this Fornax has no fornax-cli.
+      - name: Check the .deb installs and removes the fornax command
         run: |
           set -euo pipefail
-          if [ ! -d dist/linux-unpacked/resources/server/kiln-cli ]; then echo "No kiln command in this build"; exit 0; fi
+          if [ ! -d dist/linux-unpacked/resources/server/fornax-cli ]; then echo "No fornax command in this build"; exit 0; fi
           sudo apt-get install -y -qq --no-install-recommends ./dist/*.deb > /dev/null
-          head -n 2 /usr/bin/kiln
-          head -n 5 /usr/bin/kiln | grep -q '^# kiln-studio-launcher'
-          env -u JAVA_HOME PATH=/usr/bin:/bin kiln --version
-          env -u JAVA_HOME PATH=/usr/bin:/bin HF_HUB_CACHE="$RUNNER_TEMP/hf" kiln list
-          sudo apt-get remove -y -qq kiln-studio > /dev/null
-          if [ -e /usr/bin/kiln ]; then echo "::error::/usr/bin/kiln is still there after removing the package"; exit 1; fi
+          head -n 2 /usr/bin/fornax
+          head -n 5 /usr/bin/fornax | grep -q '^# fornax-studio-launcher'
+          env -u JAVA_HOME PATH=/usr/bin:/bin fornax --version
+          env -u JAVA_HOME PATH=/usr/bin:/bin HF_HUB_CACHE="$RUNNER_TEMP/hf" fornax list
+          sudo apt-get remove -y -qq fornax-studio > /dev/null
+          if [ -e /usr/bin/fornax ]; then echo "::error::/usr/bin/fornax is still there after removing the package"; exit 1; fi
 
       # Start the packaged app under a virtual display, with every kind of work stubbed (no GPU on the runner, no
-      # models), and wait for the studio's server and Kiln's backend to answer: the backend started by the app, on the
+      # models), and wait for the studio's server and Fornax's backend to answer: the backend started by the app, on the
       # app's own Java, with no Java on the PATH or in JAVA_HOME. We run the unpacked build, the same binary that goes
       # into the .deb and .rpm, with --no-sandbox, because Chromium's SUID sandbox helper isn't set up in the unpacked
       # tree (the installed package sets it up); that's an install-time concern, not what this gate checks.
@@ -147,8 +147,8 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get install -y -qq xvfb libvulkan1 > /dev/null
-          app="dist/linux-unpacked/kiln-studio"
-          env -u JAVA_HOME PATH=/usr/bin:/bin KILN_ALLOW_CPU=true KILN_STUDIO_STUB=chat,image,song KILN_STUDIO_HOME="$RUNNER_TEMP/kiln-studio" \
+          app="dist/linux-unpacked/fornax-studio"
+          env -u JAVA_HOME PATH=/usr/bin:/bin FORNAX_ALLOW_CPU=true FORNAX_STUDIO_STUB=chat,image,song FORNAX_STUDIO_HOME="$RUNNER_TEMP/fornax-studio" \
             xvfb-run -a "$app" --no-sandbox > "$RUNNER_TEMP/app.log" 2>&1 &
           pid=$!
           ok=0
@@ -158,17 +158,17 @@ jobs:
             sleep 2
           done
           kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true
-          pkill -f kiln-studio || true
+          pkill -f fornax-studio || true
           if [ "$ok" != 1 ]; then
             echo "::error::the app did not answer on localhost:5190 and 127.0.0.1:5191"
             cat "$RUNNER_TEMP/app.log"
-            cat /tmp/kiln-studio-electron.log 2>/dev/null || true
+            cat /tmp/fornax-studio-electron.log 2>/dev/null || true
             exit 1
           fi
           {
-            echo "### Kiln Studio, Linux x64"
+            echo "### Fornax Studio, Linux x64"
             echo
-            echo "- the app starts, and starts Kiln's backend on its own Java (stubbed, --no-sandbox, under xvfb)"
+            echo "- the app starts, and starts Fornax's backend on its own Java (stubbed, --no-sandbox, under xvfb)"
             echo
             ls -l dist/*.deb dist/*.rpm | awk '{print "- " $NF ": " $5 " bytes"}'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -176,7 +176,7 @@ jobs:
       - name: Upload the packages
         uses: actions/upload-artifact@v4
         with:
-          name: kiln-studio-linux-x64
+          name: fornax-studio-linux-x64
           path: |
             dist/*.deb
             dist/*.rpm
@@ -196,7 +196,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: kiln-studio-linux-x64
+          name: fornax-studio-linux-x64
           path: assets
       # --clobber, so re-running a failed release run replaces the assets.
       - name: Upload to the release

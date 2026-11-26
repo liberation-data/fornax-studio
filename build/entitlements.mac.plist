@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
 	<!--
-		Hardened-runtime entitlements for Kiln Studio.
+		Hardened-runtime entitlements for Fornax Studio.
 
 		Electron apps run a V8 JIT and load native modules, which the
 		hardened runtime blocks unless these three exceptions are granted.
 		The bundled Java runtime (Contents/Resources/server/jre) needs the
-		same: HotSpot's JIT writes code at run time, and the JVM loads Kiln's
+		same: HotSpot's JIT writes code at run time, and the JVM loads Fornax's
 		engine libraries (server/native/*.dylib) through FFM. Both
 		`mac.entitlements` and `mac.entitlementsInherit` point here so the main
 		app, its helpers and bin/java are signed alike.

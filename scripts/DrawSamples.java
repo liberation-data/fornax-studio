@@ -119,7 +119,7 @@ BufferedImage invoice() {
     g.setColor(new Color(0x5B6168));
     g.drawString("Payment by bank transfer within 30 days, quoting the invoice number.", 60, h - 110);
     g.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 16));
-    g.drawString("Sample invoice for Kiln Studio: every name, address and figure on it is made up.", 60, h - 70);
+    g.drawString("Sample invoice for Fornax Studio: every name, address and figure on it is made up.", 60, h - 70);
     g.dispose();
     return img;
 }

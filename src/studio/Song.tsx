@@ -134,7 +134,7 @@ export function Song() {
   return (
     <div className="studio-window">
       <StubNotice kind="song" />
-      <Split side={form} size={360} remember="kiln-studio.song" label="Resize the settings">
+      <Split side={form} size={360} remember="fornax-studio.song" label="Resize the settings">
         <Pane label="Songs made" padded>
           {problem && <p className="studio-failure">{problem}</p>}
           {busy && (

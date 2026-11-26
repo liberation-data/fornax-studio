@@ -30,10 +30,12 @@ export function useStudio(): Studio {
   return studio
 }
 
-const CHOSEN = 'kiln-studio.chosen'
-const remembered = (): Partial<Record<Kind, string>> => {
+const CHOSEN = 'fornax-studio.chosen'
+// Where the choices were kept before the rename, read until the app saves its own.
+const CHOSEN_BEFORE = 'kiln-studio.chosen'
+export const remembered = (storage: Pick<Storage, 'getItem'> = window.localStorage): Partial<Record<Kind, string>> => {
   try {
-    return JSON.parse(window.localStorage.getItem(CHOSEN) ?? '{}') as Partial<Record<Kind, string>>
+    return JSON.parse(storage.getItem(CHOSEN) ?? storage.getItem(CHOSEN_BEFORE) ?? '{}') as Partial<Record<Kind, string>>
   } catch {
     return {}
   }

@@ -219,7 +219,7 @@ export function VideoWindow() {
   return (
     <div className="studio-window">
       <StubNotice kind="video" />
-      <Split side={form} size={360} remember="kiln-studio.video" label="Resize the settings">
+      <Split side={form} size={360} remember="fornax-studio.video" label="Resize the settings">
         <div className="studio-output">
           {problem && <p className="studio-failure">{problem}</p>}
           {busy ? (

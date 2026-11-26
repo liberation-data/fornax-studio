@@ -1,7 +1,7 @@
 #!/bin/bash
 # The .deb's and .rpm's after-install script: electron-builder's own (app-builder-lib 26.18.0,
-# templates/linux/after-install.tpl), as it is, then the kiln command. electron-builder fills in the ${...} macros, so
-# the kiln part uses none.
+# templates/linux/after-install.tpl), as it is, then the fornax command. electron-builder fills in the ${...} macros, so
+# the fornax part uses none.
 
 
 if type update-alternatives >/dev/null 2>&1; then
@@ -60,8 +60,8 @@ if apparmor_status --enabled > /dev/null 2>&1; then
   fi
 fi
 
-# The kiln command, for every user: /usr/bin/kiln, the launcher the app ships rendered with the app's own Java, jars
-# and natives (as the app's Install kiln command does for ~/.local/bin). Not over a kiln that isn't Kiln Studio's.
-if [ -f '/opt/${sanitizedProductName}/resources/kiln-launcher.sh' ]; then
-  sh '/opt/${sanitizedProductName}/resources/kiln-launcher.sh' '/opt/${sanitizedProductName}/resources' /usr/bin/kiln || true
+# The fornax command, for every user: /usr/bin/fornax, the launcher the app ships rendered with the app's own Java, jars
+# and natives (as the app's Install fornax command does for ~/.local/bin). Not over a fornax that isn't Fornax Studio's.
+if [ -f '/opt/${sanitizedProductName}/resources/fornax-launcher.sh' ]; then
+  sh '/opt/${sanitizedProductName}/resources/fornax-launcher.sh' '/opt/${sanitizedProductName}/resources' /usr/bin/fornax || true
 fi

@@ -31,12 +31,12 @@ const LIMITS: Record<string, WindowLimits> = {
 }
 
 function infoOf(id: string): ReactNode {
-  if (id === 'models') return 'What in the Hugging Face cache Kiln can run: every GGUF chat model, and the image, song, video and vision presets whose files are all downloaded. Kiln’s ModelPool keeps what is loaded between uses, within a memory budget.'
+  if (id === 'models') return 'What in the Hugging Face cache Fornax can run: every GGUF chat model, and the image, song, video and vision presets whose files are all downloaded. Fornax’s ModelPool keeps what is loaded between uses, within a memory budget.'
   if (id === 'chat') return 'A GGUF model through llama.cpp, streamed token by token from a Java callback. Tools offers the model a clock and a calculator through LlamaModel.chatJson, the OpenAI-style tool-calling API.'
-  if (id === 'image') return 'stable-diffusion.cpp through Kiln’s DiffusionModel: FLUX.2 [klein] and Qwen-Image. Each step is reported as it finishes.'
-  if (id === 'song') return 'ACE-Step 1.5 through Kiln’s AceStepModel, or YuE2 through its Yue2Model: a style and lyrics in, a 48 kHz stereo song out. YuE2’s weights are CC BY-NC 4.0: no commercial use.'
-  if (id === 'video') return 'LTX-2.5 through Kiln’s DiffusionModel.generateVideo, with the two-stage recipe: a draft, the x2 latent upscaler, then a refine. Picture and sound are made together; ffmpeg makes the .mp4.'
-  if (id === 'inspect') return 'A vision language model through Kiln’s LlamaModel, with its mmproj, on llama.cpp’s mtmd: Qwen3-VL, PaddleOCR-VL or MedGemma. An image and a prompt in; an answer out, streamed, as text or as JSON held to a schema with LlamaModel.chatJson.'
+  if (id === 'image') return 'stable-diffusion.cpp through Fornax’s DiffusionModel: FLUX.2 [klein] and Qwen-Image. Each step is reported as it finishes.'
+  if (id === 'song') return 'ACE-Step 1.5 through Fornax’s AceStepModel, or YuE2 through its Yue2Model: a style and lyrics in, a 48 kHz stereo song out. YuE2’s weights are CC BY-NC 4.0: no commercial use.'
+  if (id === 'video') return 'LTX-2.5 through Fornax’s DiffusionModel.generateVideo, with the two-stage recipe: a draft, the x2 latent upscaler, then a refine. Picture and sound are made together; ffmpeg makes the .mp4.'
+  if (id === 'inspect') return 'A vision language model through Fornax’s LlamaModel, with its mmproj, on llama.cpp’s mtmd: Qwen3-VL, PaddleOCR-VL or MedGemma. An image and a prompt in; an answer out, streamed, as text or as JSON held to a schema with LlamaModel.chatJson.'
   return null
 }
 
@@ -68,10 +68,10 @@ const DOCK = [
 
 function Studio() {
   const { status, problem, refresh } = useStudio()
-  useDocumentTitle(title, { app: 'Kiln Studio' })
+  useDocumentTitle(title, { app: 'Fornax Studio' })
 
   const menus = useMemo(() => [
-    { id: 'studio', label: 'Kiln Studio', emphasis: true, items: [
+    { id: 'studio', label: 'Fornax Studio', emphasis: true, items: [
         menuAction('Models…', () => desk.open('models')),
         menuAction('Reload the Cache', refresh),
         menuSeparator(),
@@ -86,7 +86,7 @@ function Studio() {
       ] },
   ], [refresh])
 
-  // What Kiln holds, at the end of the menu bar: the models loaded and their memory, or that the backend is down.
+  // What Fornax holds, at the end of the menu bar: the models loaded and their memory, or that the backend is down.
   const loaded = status?.models.filter(m => m.loaded && !m.stub) ?? []
   const status_ = useMemo(() => [{
     id: 'pool',
@@ -94,7 +94,7 @@ function Studio() {
     title: (
       <span className="studio-pool">
         <span className="studio-pool-dot" data-state={problem ? 'down' : loaded.length ? 'loaded' : 'idle'} aria-hidden="true" />
-        {problem ? 'Kiln backend not answering' : loaded.length ? `${loaded.length} loaded · ${bytes(status?.loadedBytes)}` : 'Nothing loaded'}
+        {problem ? 'Fornax backend not answering' : loaded.length ? `${loaded.length} loaded · ${bytes(status?.loadedBytes)}` : 'Nothing loaded'}
       </span>
     ),
     items: () => [
@@ -106,7 +106,7 @@ function Studio() {
 
   return (
     <div className="studio">
-      <MenuBar menus={menus} status={status_} leading={<span className="studio-mark" role="img" aria-label="Kiln" />} />
+      <MenuBar menus={menus} status={status_} leading={<span className="studio-mark" role="img" aria-label="Fornax" />} />
       <main className="studio-screen">
         <Desktop
           title={title}
@@ -115,7 +115,7 @@ function Studio() {
           limits={id => LIMITS[id] ?? null}
           empty={
             <div className="studio-hint studio-welcome">
-              <h2>Kiln Studio</h2>
+              <h2>Fornax Studio</h2>
               <p>Open-weight models as plain Java calls, on your GPU, in one JVM. Try a chat model, an image model, a song model, a video model or a vision model from your Hugging Face cache.</p>
               <div className="studio-hint-actions">
                 <Button onClick={() => desk.open('models')}>Models</Button>

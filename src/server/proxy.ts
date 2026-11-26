@@ -1,11 +1,11 @@
 /*
- * How the studio's server passes a request on to Kiln's backend: where the backend is, and which headers cross. The
- * desktop app sets KILN_STUDIO_SERVER when it starts both; from `npm run dev` it is the backend's default port.
+ * How the studio's server passes a request on to Fornax's backend: where the backend is, and which headers cross. The
+ * desktop app sets FORNAX_STUDIO_SERVER when it starts both; from `npm run dev` it is the backend's default port.
  */
 
 export const DEFAULT_BACKEND = 'http://127.0.0.1:5191'
 
-export function backendUrl(path: readonly string[], search = '', base = process.env.KILN_STUDIO_SERVER ?? DEFAULT_BACKEND): string {
+export function backendUrl(path: readonly string[], search = '', base = process.env.FORNAX_STUDIO_SERVER ?? DEFAULT_BACKEND): string {
   const clean = path.map(segment => encodeURIComponent(segment)).join('/')
   return `${base.replace(/\/$/, '')}/api/${clean}${search}`
 }
