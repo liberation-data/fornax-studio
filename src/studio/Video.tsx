@@ -156,7 +156,7 @@ export function VideoWindow() {
         }
       }, controller.signal)
     } catch (e) {
-      setProblem(controller.signal.aborted ? 'Stopped waiting. The backend finishes the clip anyway (stable-diffusion.cpp has no way to stop a render).' : e instanceof Error ? e.message : String(e))
+      setProblem(controller.signal.aborted ? 'Stopped. The backend cancels the render at its next step.' : e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
       setState(null)
@@ -208,7 +208,7 @@ export function VideoWindow() {
         <Button intent="default" disabled={!model || busy || !prompt.trim() || !sizeOk || !framesAllowed(frames)} onClick={() => void generate()}>
           {busy ? 'Generating…' : 'Generate'}
         </Button>
-        {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop waiting</Button>}
+        {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop</Button>}
       </div>
       {model && !model.loaded && !busy && (
         <p className="desk-text-small desk-text-muted">The first clip loads {model.name} ({bytes(model.sizeBytes)}) onto the GPU first. A clip takes minutes.</p>
