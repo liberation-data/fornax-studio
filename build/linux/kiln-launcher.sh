@@ -2,14 +2,14 @@
 # kiln-launcher.sh <resources> <file>: writes the kiln command to <file>, for the .deb and .rpm, whose after-install
 # script runs it as root with the app's resources folder and /usr/bin/kiln. It renders the launcher the app ships
 # (server/kiln-cli/bin/kiln) with the app's own Java, the kiln command's jars and the app's natives, the way the app's
-# "Install kiln Command…" does (kiln-command.cjs; the tests check the two agree).
+# "Install kiln command…" does (kiln-command.cjs; the tests check the two agree).
 #
 # It leaves <file> alone when it is a kiln that isn't Kiln Studio's, and does nothing when this build has no kiln
 # command. It never fails the install.
 set -u
 res=$1
 out=$2
-marker="# kiln-studio-launcher: Kiln Studio wrote this file, and its Uninstall kiln Command removes it."
+marker="# kiln-studio-launcher: Kiln Studio wrote this file, and its Uninstall kiln command removes it."
 template=$res/server/kiln-cli/bin/kiln
 lib=$res/server/kiln-cli/lib
 [ -f "$template" ] && [ -d "$lib" ] || exit 0

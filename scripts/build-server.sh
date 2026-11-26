@@ -2,7 +2,7 @@
 # Builds Kiln's backend for the studio (kiln-studio-server, in the Kiln checkout) and puts it, with Kiln's native
 # libraries, in server/, where the desktop app starts it from and electron-builder packs it. When the checkout has the
 # kiln command (kiln-cli), it puts that in server/kiln-cli too: bin/kiln, the launcher that the app's "Install kiln
-# Command…" renders onto PATH, and lib/, its jars. The natives jar is left out, since the app's natives are in
+# command…" renders onto PATH, and lib/, its jars. The natives jar is left out, since the app's natives are in
 # server/native and the launcher it renders points there.
 #
 #   KILN_HOME      the Kiln checkout (default ../kiln)
@@ -23,7 +23,6 @@ native="${KILN_NATIVE:-$kiln/build/native/$os-$arch-${KILN_BACKEND:-vulkan}}"
 rm -rf "$here/server/native" "$here/server/kiln-cli"
 mkdir -p "$here/server/native"
 cp "$kiln/kiln-studio-server/build/libs/kiln-studio-server.jar" "$here/server/"
-# Every engine the studio runs (native/build.sh vulkan llama sd acestep yue2 builds just these).
 if [ -d "$cli_home/kiln-cli" ]; then
   (cd "$cli_home" && ./gradlew -q :kiln-cli:installDist)
   dist="$cli_home/kiln-cli/build/install/kiln-cli"
@@ -34,6 +33,7 @@ if [ -d "$cli_home/kiln-cli" ]; then
 else
   echo "No kiln-cli in $cli_home: the app is built without the kiln command" >&2
 fi
+# Every engine the studio runs (native/build.sh vulkan llama sd acestep yue2 builds just these).
 libs=(libkiln_llama libstable-diffusion libkiln_acestep libkiln_yue2)
 missing=()
 for lib in "${libs[@]}"; do

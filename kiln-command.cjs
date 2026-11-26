@@ -1,4 +1,4 @@
-// kiln-command.cjs: "Install kiln Command…", as VS Code's "Install 'code' command in PATH". It renders the launcher
+// kiln-command.cjs: "Install kiln command…", as VS Code's "Install 'code' command in PATH". It renders the launcher
 // that kiln-cli ships (server/kiln-cli/bin/kiln, which npm run server:build puts there) with the app's own Java, the
 // kiln command's jars and the app's natives, and writes it as an executable `kiln` into a folder on PATH. Apart from
 // main.cjs, which needs Electron and shows the dialogs, so a test can drive it.
@@ -8,11 +8,12 @@
 //
 // build/linux/kiln-launcher.sh renders it the same way for the .deb and .rpm (/usr/bin/kiln), so the marker below is
 // in both files, and the tests check they agree.
+const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 /** The line that marks a launcher as Kiln Studio's: only a file with it is replaced or removed without asking. */
-const MARKER = "# kiln-studio-launcher: Kiln Studio wrote this file, and its Uninstall kiln Command removes it.";
+const MARKER = "# kiln-studio-launcher: Kiln Studio wrote this file, and its Uninstall kiln command removes it.";
 
 const PLACEHOLDERS = { java: '@KILN_JAVA@', lib: '@KILN_CLI_LIB@', natives: '@KILN_LIBRARY_PATH@' };
 
@@ -149,6 +150,33 @@ function onPath(dir, PATH = '') {
   return PATH.split(path.delimiter).filter(Boolean).some(p => norm(p) === norm(dir));
 }
 
+/**
+ * The PATH a new terminal gets: the login shell's (a desktop app's own PATH is often shorter), else env.PATH. An rc
+ * file that hangs or waits must not hold up the install: an interactive bash ignores SIGTERM, and a child it started
+ * can keep its output open, so after timeout the shell is killed and env.PATH answers.
+ */
+function terminalPath({ shell, env = process.env, timeout = 5000 } = {}) {
+  const fallback = env.PATH ?? '';
+  return new Promise(resolve => {
+    const child = execFile(shell || env.SHELL || '/bin/sh', ['-ilc', 'printf "\n__KILN_PATH__%s__KILN_PATH__\n" "$PATH"'], { env },
+      (error, stdout) => {
+        clearTimeout(timer);
+        const found = /__KILN_PATH__(.*)__KILN_PATH__/.exec(stdout ?? '');
+        resolve(found ? found[1] : fallback);
+      });
+    const timer = setTimeout(() => { child.kill('SIGKILL'); resolve(fallback); }, timeout);
+  });
+}
+
+/**
+ * The sh command that puts the launcher at tmp into dir as file, as an administrator: copied beside file, then renamed
+ * over it, so a symlink there is replaced rather than written through (cp would overwrite what it points to).
+ */
+function adminInstallCommand({ tmp, dir, file }) {
+  const next = `${file}.kiln-studio-new`;
+  return `mkdir -p ${shellQuote(dir)} && cp ${shellQuote(tmp)} ${shellQuote(next)} && chmod 755 ${shellQuote(next)} && mv -f ${shellQuote(next)} ${shellQuote(file)}`;
+}
+
 /** An AppleScript that runs the sh command as an administrator, after macOS asks for the password. */
 function adminScript(command) {
   const escaped = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -157,5 +185,5 @@ function adminScript(command) {
 
 module.exports = {
   MARKER, PLACEHOLDERS, shellQuote, renderLauncher, launcherFor, isStudioLauncher, bundledCli, locationProblem, installTargets,
-  launcherState, writeLauncher, removeLauncher, onPath, adminScript,
+  launcherState, writeLauncher, removeLauncher, onPath, terminalPath, adminInstallCommand, adminScript,
 };

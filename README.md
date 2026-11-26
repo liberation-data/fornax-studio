@@ -39,7 +39,7 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
 
 ## The kiln command
 
-Kiln has one download, and this is it: **Install kiln Command…** (in the Kiln Studio menu on macOS, the File menu on
+Kiln has one download, and this is it: **Install kiln command…** (in the Kiln Studio menu on macOS, the File menu on
 Linux) puts Kiln's command-line tool, `kiln` (`kiln pull`, `list`, `chat`, `test`, `info`), on your `PATH`, as VS
 Code does for `code`. It writes kiln-cli's launcher, filled in with the app's own Java, the kiln command's jars and the
 app's native libraries, so nothing else needs installing:
@@ -51,7 +51,7 @@ app's native libraries, so nothing else needs installing:
   from Downloads in, since the launcher points into the app.
 - Windows: not yet (there is no Windows build).
 
-A `kiln` that Kiln Studio didn't write is replaced only when you say so, and **Uninstall kiln Command** removes only
+A `kiln` that Kiln Studio didn't write is replaced only when you say so, and **Uninstall kiln command** removes only
 Kiln Studio's own (it marks it with a `# kiln-studio-launcher` line). Install it again after moving the app. Then try
 `kiln list`. The item is disabled when the app was built from a Kiln without kiln-cli.
 

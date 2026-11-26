@@ -178,7 +178,7 @@ function createWindow() {
 }
 
 /*
- * The kiln command: "Install kiln Command…" writes kiln-cli's launcher, rendered with this app's Java, jars and
+ * The kiln command: "Install kiln command…" writes kiln-cli's launcher, rendered with this app's Java, jars and
  * natives, into a folder on PATH (kiln-command.cjs has the rendering and the checks). Linux: ~/.local/bin. macOS:
  * /usr/local/bin, with an administrator's password when it isn't writable, or ~/.local/bin. Windows: TODO, there is no
  * Windows build yet (see installTargets).
@@ -193,12 +193,12 @@ function cliItems() {
   const missing = 'This build of Kiln Studio has no kiln command: it was built from a Kiln without kiln-cli.';
   return [
     {
-      label: cli ? 'Install kiln Command…' : 'Install kiln Command… (not in this build)',
+      label: cli ? 'Install kiln command…' : 'Install kiln command… (not in this build)',
       enabled: Boolean(cli), toolTip: cli ? 'Put the kiln command on your PATH, so a terminal can run kiln' : missing,
       click: () => installKiln(cli).catch(error => commandError('install', error)),
     },
     {
-      label: 'Uninstall kiln Command',
+      label: 'Uninstall kiln command',
       click: () => uninstallKiln().catch(error => commandError('uninstall', error)),
     },
   ];
@@ -216,17 +216,6 @@ function runAsAdmin(command) {
       if (!error) return resolve(true);
       if (/-128/.test(stderr)) return resolve(false);  // the user cancelled the password prompt
       reject(new Error(stderr.trim() || error.message));
-    });
-  });
-}
-
-/** The PATH a new terminal gets: the login shell's (a desktop app's own PATH is often shorter), else this process's. */
-function terminalPath() {
-  const sh = process.env.SHELL || '/bin/sh';
-  return new Promise(resolve => {
-    execFile(sh, ['-ilc', 'printf "\n__KILN_PATH__%s__KILN_PATH__\n" "$PATH"'], { timeout: 5000 }, (error, stdout) => {
-      const found = /__KILN_PATH__(.*)__KILN_PATH__/.exec(stdout ?? '');
-      resolve(found ? found[1] : process.env.PATH ?? '');
     });
   });
 }
@@ -267,13 +256,12 @@ async function installKiln(cli) {
     // /usr/local/bin is root's: write the launcher to a temporary file, then copy it there as an administrator.
     const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kiln-studio-')), 'kiln');
     fs.writeFileSync(tmp, content, { mode: 0o755 });
-    const q = kilnCommand.shellQuote;
-    const done = await runAsAdmin(`mkdir -p ${q(target.dir)} && cp ${q(tmp)} ${q(file)} && chmod 755 ${q(file)}`)
+    const done = await runAsAdmin(kilnCommand.adminInstallCommand({ tmp, dir: target.dir, file }))
       .finally(() => fs.rmSync(path.dirname(tmp), { recursive: true, force: true }));
     if (!done) return;
   }
   log('[Electron] Installed the kiln command at', file);
-  const onPath = kilnCommand.onPath(target.dir, await terminalPath());
+  const onPath = kilnCommand.onPath(target.dir, await kilnCommand.terminalPath());
   const pathNote = onPath ? '' : `\n\n${tilde(target.dir)} isn't on your PATH yet. Add this line to your shell's profile (~/.bashrc, ~/.zshrc), then open a new terminal:\n\n    export PATH="$HOME/.local/bin:$PATH"`;
   await dialog.showMessageBox({
     type: 'info', message: 'The kiln command is installed',

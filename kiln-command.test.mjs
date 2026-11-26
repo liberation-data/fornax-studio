@@ -144,6 +144,38 @@ describe('where kiln goes', () => {
     expect(k.onPath('/home/u/.local/bin', '')).toBe(false)
   })
 
+  it('finds the login shell\'s PATH, and gives up on an rc file that hangs', async () => {
+    const env = { HOME: tmp, PATH: '/usr/bin:/bin' }
+    fs.writeFileSync(path.join(tmp, '.bash_profile'), 'PATH="/from/profile:$PATH"\n')
+    expect(await k.terminalPath({ shell: 'bash', env })).toMatch(/^\/from\/profile:/)
+    expect(await k.terminalPath({ shell: path.join(tmp, 'no-such-shell'), env })).toBe('/usr/bin:/bin')
+    // An interactive bash ignores SIGTERM, and the sleep it starts keeps its output open.
+    fs.writeFileSync(path.join(tmp, '.bash_profile'), 'sleep 3 & while :; do sleep 1; done\n')
+    const started = Date.now()
+    expect(await k.terminalPath({ shell: 'bash', env, timeout: 500 })).toBe('/usr/bin:/bin')
+    expect(Date.now() - started).toBeLessThan(3000)
+  })
+
+  it('installs as an administrator over a symlink without writing through it, into a folder that isn\'t there yet', () => {
+    const dir = path.join(tmp, "usr local's", 'bin')
+    const file = path.join(dir, 'kiln')
+    const src = path.join(tmp, 'launcher')
+    fs.writeFileSync(src, 'ours\n')
+    execFileSync('sh', ['-c', k.adminInstallCommand({ tmp: src, dir, file })])
+    expect(fs.readFileSync(file, 'utf8')).toBe('ours\n')
+    expect(fs.statSync(file).mode & 0o777).toBe(0o755)
+
+    const theirs = path.join(tmp, 'theirs')
+    fs.writeFileSync(theirs, 'theirs\n')
+    fs.rmSync(file)
+    fs.symlinkSync(theirs, file)
+    execFileSync('sh', ['-c', k.adminInstallCommand({ tmp: src, dir, file })])
+    expect(fs.lstatSync(file).isSymbolicLink()).toBe(false)
+    expect(fs.readFileSync(file, 'utf8')).toBe('ours\n')
+    expect(fs.readFileSync(theirs, 'utf8')).toBe('theirs\n')
+    expect(fs.readdirSync(dir)).toEqual(['kiln'])
+  })
+
   it('quotes the command for AppleScript', () => {
     expect(k.adminScript(`cp '/tmp/a "b"\\c' /usr/local/bin/kiln`))
       .toBe(`do shell script "cp '/tmp/a \\"b\\"\\\\c' /usr/local/bin/kiln" with administrator privileges`)

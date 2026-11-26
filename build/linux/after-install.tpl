@@ -61,7 +61,7 @@ if apparmor_status --enabled > /dev/null 2>&1; then
 fi
 
 # The kiln command, for every user: /usr/bin/kiln, the launcher the app ships rendered with the app's own Java, jars
-# and natives (as the app's Install kiln Command does for ~/.local/bin). Not over a kiln that isn't Kiln Studio's.
+# and natives (as the app's Install kiln command does for ~/.local/bin). Not over a kiln that isn't Kiln Studio's.
 if [ -f '/opt/${sanitizedProductName}/resources/kiln-launcher.sh' ]; then
   sh '/opt/${sanitizedProductName}/resources/kiln-launcher.sh' '/opt/${sanitizedProductName}/resources' /usr/bin/kiln || true
 fi
