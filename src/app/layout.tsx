@@ -6,7 +6,7 @@ import '../studio/studio.css'
 
 export const metadata: Metadata = {
   title: 'Kiln Studio',
-  description: 'Try models with Kiln: chat, images, songs and video, on your GPU, in one JVM.',
+  description: 'Try models with Kiln: chat, images, songs, video and vision, on your GPU, in one JVM.',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
