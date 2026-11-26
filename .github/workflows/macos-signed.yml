@@ -175,6 +175,18 @@ jobs:
           cat "$RUNNER_TEMP/backend.log"
           exit 1
 
+      # The kiln command the app installs, on the signed java under the hardened runtime. Skipped when this Kiln has no
+      # kiln-cli.
+      - name: Check the kiln command runs on the signed runtime
+        run: |
+          set -euo pipefail
+          APP="$(ls -d dist/mac*/*.app | head -n 1)"
+          server="$APP/Contents/Resources/server"
+          if [ ! -d "$server/kiln-cli" ]; then echo "No kiln command in this build"; exit 0; fi
+          export KILN_JAVA="$server/jre/bin/java" KILN_CLI_LIB="$server/kiln-cli/lib" KILN_LIBRARY_PATH="$server/native"
+          env -u JAVA_HOME sh "$server/kiln-cli/bin/kiln" --version
+          HF_HUB_CACHE="$RUNNER_TEMP/hf" env -u JAVA_HOME sh "$server/kiln-cli/bin/kiln" list
+
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v4
         with:

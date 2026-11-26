@@ -37,6 +37,24 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
   the tray are drawn by `scripts/DrawSamples.java`, with made-up data; the chest X-ray is CC0, from Wikimedia Commons.
   MedGemma's weights are under Google's Health AI Developer Foundations terms, which the window says when it is chosen.
 
+## The kiln command
+
+Kiln has one download, and this is it: **Install kiln command…** (in the Kiln Studio menu on macOS, the File menu on
+Linux) puts Kiln's command-line tool, `kiln` (`kiln pull`, `list`, `chat`, `test`, `info`), on your `PATH`, as VS
+Code does for `code`. It writes kiln-cli's launcher, filled in with the app's own Java, the kiln command's jars and the
+app's native libraries, so nothing else needs installing:
+
+- Linux: `~/.local/bin/kiln` (the dialog says when `~/.local/bin` isn't on your `PATH`). The `.deb` and `.rpm` also
+  write `/usr/bin/kiln` for every user when they install, and remove it when they're removed.
+- macOS: `/usr/local/bin/kiln`, with an administrator's password when that folder isn't yours, or `~/.local/bin/kiln`.
+  The app must be in Applications: it refuses to from its disk image, or from the temporary copy macOS runs an app
+  from Downloads in, since the launcher points into the app.
+- Windows: not yet (there is no Windows build).
+
+A `kiln` that Kiln Studio didn't write is replaced only when you say so, and **Uninstall kiln command** removes only
+Kiln Studio's own (it marks it with a `# kiln-studio-launcher` line). Install it again after moving the app. Then try
+`kiln list`. The item is disabled when the app was built from a Kiln without kiln-cli.
+
 ## How it fits together
 
 ```
@@ -59,6 +77,7 @@ Needs Node 22+, Java 25, and Kiln's native libraries (`native/build.sh` in the K
 ```sh
 npm install
 npm run server:build   # builds kiln-studio-server in KILN_HOME (default ../kiln) into server/, with the native libraries
+                       # and, when that Kiln has kiln-cli, the kiln command (server/kiln-cli)
 npm run server:jre     # optional: a Java runtime for the app of its own, in server/jre (what a release ships)
 npm run electron       # builds the page, then starts the app (and with it, the backend)
 ```
@@ -83,12 +102,13 @@ Settings, from the environment:
 | `KILN_STUDIO_IDLE_MINUTES` | unload a model idle this long (15) |
 | `KILN_STUDIO_HOME` | where images, songs and videos are kept (`~/.kiln-studio`, in `outputs/`) |
 | `KILN_HOME`, `KILN_NATIVE`, `KILN_BACKEND` | for `npm run server:build`: the Kiln checkout, and which native libraries to ship |
+| `KILN_CLI_HOME` | for `npm run server:build`: the Kiln checkout to build the kiln command from (default `KILN_HOME`) |
 | `KILN_STUDIO_JAR`, `KILN_LIBRARY_PATH`, `KILN_STUDIO_JAVA` | to run another backend jar, libraries or Java |
 | `PORT`, `KILN_STUDIO_PORT` | the page's and the backend's ports (5190, 5191) |
 
 `npm run package:linux` packs the app with electron-builder, with the backend jar, the native libraries and, after
 `npm run server:jre`, a Java runtime as resources (in `server/`). `server:jre` jlinks one from the JDK at `JAVA_HOME`
-with only the modules the jar uses (about 60 MB); the app runs it, `server/jre/bin/java`, and without it
+with only the modules the jar and the kiln command use (about 60 MB); the app and the kiln command it installs run it, `server/jre/bin/java`, and without it
 `$JAVA_HOME/bin/java`, or `java` on the `PATH`.
 
 ## Releases
@@ -112,7 +132,7 @@ its private half in this repository's `KILN_DEPLOY_KEY` secret.
 ## Tests
 
 ```sh
-npm test                                   # the page's helpers, the proxy, and how the app starts the backend
+npm test                                   # the page's helpers, the proxy, how the app starts the backend, the kiln command's launcher
 ./gradlew :kiln-studio-server:test         # in the Kiln checkout: every route, over HTTP, with the engines stubbed
 ```
 
