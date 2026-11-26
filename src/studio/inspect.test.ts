@@ -59,6 +59,14 @@ describe('fieldsOf', () => {
     expect(f.tables[0]?.columns).toEqual(['description', 'quantity', 'amount'])
   })
 
+  it('shows a reply that is a list, or a single value, rather than nothing', () => {
+    const list = fieldsOf([{ what: 'dent' }, { what: 'chip' }])
+    expect(list.tables).toHaveLength(1)
+    expect(list.tables[0]?.rows).toHaveLength(2)
+    expect(fieldsOf(42).fields.map(f => f.value)).toEqual(['42'])
+    expect(fieldsOf(null)).toEqual({ fields: [], tables: [] })
+  })
+
   it('keeps an empty list as an empty table', () => {
     expect(fieldsOf({ defects: [] }).tables[0]?.rows).toEqual([])
   })

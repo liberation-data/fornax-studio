@@ -202,7 +202,10 @@ export function cell(key: string, v: unknown): string {
   return JSON.stringify(v)
 }
 
-/** A reply as tables: its single values as fields, and each list of objects as a table of its own. */
+/**
+ * A reply as tables: its single values as fields, and each list of objects as a table of its own. A reply that isn't an
+ * object (a schema may ask for a list, or a single value) is one table or one field.
+ */
 export interface Fields {
   fields: { key: string; label: string; value: string }[]
   tables: { key: string; label: string; columns: string[]; rows: Record<string, unknown>[] }[]
@@ -210,7 +213,9 @@ export interface Fields {
 
 export function fieldsOf(json: unknown): Fields {
   const out: Fields = { fields: [], tables: [] }
-  if (!json || typeof json !== 'object' || Array.isArray(json)) return out
+  if (Array.isArray(json)) return fieldsOf({ items: json })
+  if (json == null) return out
+  if (typeof json !== 'object') return { fields: [{ key: 'value', label: 'Value', value: cell('value', json) }], tables: [] }
   for (const [key, v] of Object.entries(json as Record<string, unknown>)) {
     if (Array.isArray(v) && v.length > 0 && v.every(r => r && typeof r === 'object' && !Array.isArray(r))) {
       const rows = v as Record<string, unknown>[]
