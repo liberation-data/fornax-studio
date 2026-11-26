@@ -40,15 +40,22 @@ const remembered = (): Partial<Record<Kind, string>> => {
 }
 
 /**
- * The model a window uses when none has been chosen, or the one chosen has gone: one already loaded, else the smallest
- * that can be, as the quickest to try.
+ * The model a kind starts with, when it is in the cache, rather than the smallest: Inspect's presets are made for
+ * Qwen3-VL, and the smallest vision model, PaddleOCR-VL, only reads text.
+ */
+const PREFERRED: Partial<Record<Kind, string>> = { vision: 'vision:qwen3-vl-4b' }
+
+/**
+ * The model a window uses when none has been chosen, or the one chosen has gone: one already loaded, else the kind's
+ * preferred one, else the smallest that can be, as the quickest to try.
  */
 export function defaultModel(models: readonly Model[], kind: Kind, wanted?: string): Model | null {
   const ofKind = models.filter(m => m.kind === kind)
   const asked = ofKind.find(m => m.id === wanted && m.available)
   if (asked) return asked
   const usable = ofKind.filter(m => m.available)
-  return usable.find(m => m.loaded) ?? [...usable].sort((a, b) => a.sizeBytes - b.sizeBytes)[0] ?? null
+  return usable.find(m => m.loaded) ?? usable.find(m => m.id === PREFERRED[kind])
+    ?? [...usable].sort((a, b) => a.sizeBytes - b.sizeBytes)[0] ?? null
 }
 
 export function StudioProvider({ children }: { children: ReactNode }) {

@@ -5,7 +5,7 @@ import type { Column } from '@liberation-data/desk/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { InspectDone, LoadStatus } from './api'
 import { bytes, rate, seconds } from './format'
-import { PRESETS, SAMPLES, cell, fieldsOf, findBoxes, humanize, parseSchema } from './inspect'
+import { PRESETS, SAMPLES, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema } from './inspect'
 import type { Box, Preset, PresetId } from './inspect'
 import { Figures, LicenseNote, ModelPicker, StubNotice, TextArea } from './parts'
 import { postStream } from './sse'
@@ -33,9 +33,12 @@ function useFitted(ratio: number | null) {
     const el = box.current
     if (!el || !ratio) return
     const measure = () => {
-      const w = el.clientWidth, h = el.clientHeight
-      if (!w || !h) return
-      setSize(w / h > ratio ? { width: h * ratio, height: h } : { width: w, height: w / ratio })
+      // The content box: clientWidth and clientHeight count the padding, and a frame sized past it is squeezed by its
+      // max-width or max-height out of the image's shape, so the boxes drawn over it would miss.
+      const css = getComputedStyle(el)
+      const fitted = contain(el.clientWidth - parseFloat(css.paddingLeft) - parseFloat(css.paddingRight),
+        el.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom), ratio)
+      if (fitted) setSize(fitted)
     }
     measure()
     const observer = new ResizeObserver(measure)
@@ -64,8 +67,8 @@ function Stage({ picture, boxes }: { picture: Picture; boxes: readonly Box[] }) 
   )
 }
 
-/** **Bold** and bulleted lines, as a model writes them in a free-text answer. */
-function Prose({ text }: { text: string }) {
+/** **Bold** and bulleted lines, as a model writes them in a free-text answer; anything else in it stays text. */
+export function Prose({ text }: { text: string }) {
   const inline = (line: string) => line.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part))
   return (
     <div className="studio-inspect-prose">
@@ -121,7 +124,9 @@ export function InspectWindow() {
   const [busy, setBusy] = useState(false)
   const [state, setState] = useState<LoadStatus | null>(null)
   const [text, setText] = useState('')
-  const [read, setRead] = useState<string | null>(null)
+  /** What an OCR model read, and which model read it; and the model now filling the schema from it. */
+  const [read, setRead] = useState<{ text: string; by: string } | null>(null)
+  const [filling, setFilling] = useState<string | null>(null)
   const [done, setDone] = useState<InspectDone | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const [view, setView] = useState<'fields' | 'json'>('fields')
@@ -184,13 +189,14 @@ export function InspectWindow() {
     setDone(null)
     setText('')
     setRead(null)
+    setFilling(null)
     setState(null)
     setView('fields')
     setLive({ tokens: 0, first: null, now: performance.now() })
     const controller = new AbortController()
     abort.current = controller
     try {
-      await postStream('/api/inspect', { model: model.id, image: picture.url, prompt: prompt.trim(), ...(schema ? { schema } : {}) }, e => {
+      await postStream('/api/inspect', inspectRequest(model.id, { image: picture.url, prompt, schema }), e => {
         const data = e.data as Record<string, unknown>
         if (e.event === 'status') {
           const s = data as unknown as LoadStatus & { read?: string }
@@ -198,7 +204,8 @@ export function InspectWindow() {
           if (s.state === 'loaded') refresh()
           if (s.state === 'structuring') {
             // The OCR model has read the page; another fills the schema from its text, and streams afresh.
-            setRead(s.read ?? '')
+            setRead({ text: s.read ?? '', by: model.name })
+            setFilling(status?.models.find(m => m.id === s.model)?.name ?? 'another model')
             setText('')
             setLive({ tokens: 0, first: null, now: performance.now() })
           }
@@ -211,7 +218,7 @@ export function InspectWindow() {
           const d = data as unknown as InspectDone
           setDone(d)
           setText(d.text)
-          if (d.read != null) setRead(d.read)
+          if (d.read != null) setRead({ text: d.read, by: model.name })
         } else if (e.event === 'error') {
           setProblem(String(data.message ?? 'failed'))
         }
@@ -221,17 +228,15 @@ export function InspectWindow() {
     } finally {
       setBusy(false)
       setState(null)
+      setFilling(null)
       abort.current = null
       refresh()
     }
-  }, [model, picture, busy, prompt, schema, refresh])
+  }, [model, picture, busy, prompt, schema, refresh, status])
 
   const boxes = useMemo(() => (done?.json != null ? findBoxes(done.json, done.width, done.height) : []), [done])
   const liveRate = live.first != null && live.now > live.first ? ((live.tokens - 1) * 1000) / (live.now - live.first) : null
-  const filler = state?.state === 'structuring' ? status?.models.find(m => m.id === state.model) : null
-  const working = state?.state === 'loading' ? `loading ${status?.models.find(m => m.id === state.model)?.name ?? 'the model'}…`
-    : filler ? `filling the schema with ${filler.name}…`
-    : liveRate ? rate(liveRate) : 'reading the image…'
+  const working = inspectPhase(state, id => status?.models.find(m => m.id === id)?.name, filling, liveRate)
   const reviewNote = current?.note && preset === 'review'
 
   const form = (
@@ -255,7 +260,8 @@ export function InspectWindow() {
           data-dragging={dragging || undefined}
           role="button"
           tabIndex={0}
-          aria-label="Drop an image here, or choose one"
+          aria-label={picture ? `Image: ${picture.name}. Drop another here, or choose one` : 'Drop an image here, or choose one'}
+          aria-disabled={busy || undefined}
           onClick={() => !busy && picker.current?.click()}
           onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); picker.current?.click() } }}
           onDragEnter={e => { e.preventDefault(); setDragging(true) }}
@@ -328,8 +334,8 @@ export function InspectWindow() {
                 {done?.finishReason === 'length' && <p className="studio-license desk-text-small" role="note">The reply ran out of tokens before it was finished.</p>}
                 {read != null && (
                   <details className="studio-thinking">
-                    <summary>Read by {model?.name} in {seconds(done?.readSeconds)}</summary>
-                    <p>{read}</p>
+                    <summary>Read by {read.by} in {seconds(done?.readSeconds)}</summary>
+                    <p>{read.text}</p>
                   </details>
                 )}
                 {answer}

@@ -1,5 +1,8 @@
 /** The Inspect window's presets, and how it reads what a vision model answers: fields to tabulate, boxes to draw. */
 
+import type { LoadStatus } from './api'
+import { rate } from './format'
+
 export type PresetId = 'invoice' | 'defects' | 'review'
 
 export interface Preset {
@@ -99,6 +102,27 @@ export function parseSchema(text: string): { schema: Record<string, unknown> | n
   } catch (e) {
     return { schema: null, problem: `The schema isn’t JSON: ${e instanceof Error ? e.message : String(e)}` }
   }
+}
+
+/** The request the form makes, as the backend's /api/inspect takes it: the schema only when there is one. */
+export function inspectRequest(model: string, form: { image: string; prompt: string; schema: Record<string, unknown> | null }) {
+  return { model, image: form.image, prompt: form.prompt.trim(), ...(form.schema ? { schema: form.schema } : {}) }
+}
+
+/**
+ * Where a look is, in words: loading a model, the reply's rate once tokens come, else reading the image, or (an OCR
+ * model having read it) filling the schema, named by the model that fills it.
+ */
+export function inspectPhase(state: LoadStatus | null, nameOf: (id: string | undefined) => string | undefined, filling: string | null, liveRate: number | null): string {
+  if (state?.state === 'loading') return `loading ${nameOf(state.model) ?? 'the model'}…`
+  if (liveRate) return rate(liveRate)
+  return filling ? `filling the schema with ${filling}…` : 'reading the image…'
+}
+
+/** The size that fits an image of this shape (width / height) into a box, as `object-fit: contain` draws it. */
+export function contain(width: number, height: number, ratio: number): { width: number; height: number } | null {
+  if (!(width > 0) || !(height > 0) || !(ratio > 0)) return null
+  return width / height > ratio ? { width: height * ratio, height } : { width, height: width / ratio }
 }
 
 /** A box the model found, as fractions of the image (0 to 1), with what it said of it. */
