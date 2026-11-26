@@ -66,7 +66,7 @@ function Reply({ turn, showThinking }: { turn: Turn; showThinking: boolean }) {
 const TOOLS_SYSTEM = 'You have tools. For any arithmetic, call calculate; for the date or time, call get_current_time. Never work these out yourself.'
 
 const SUGGESTIONS: Record<Mode, string[]> = {
-  chat: ['Write a haiku about a fornax.', 'Explain what a GGUF file is, in two sentences.', 'Name three uses for a pottery fornax.'],
+  chat: ['Write a haiku about a fornax.', 'Explain what a GGUF file is, in two sentences.', 'Name three uses for a pottery kiln.'],
   tools: ['What is (17 + 4) * 3 / 2?', 'What time is it in Tokyo right now?', 'What is 2^20, and what is the time in London?'],
 }
 

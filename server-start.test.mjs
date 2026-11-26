@@ -1,6 +1,9 @@
 import { createServer } from 'node:http'
 import { describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
 const require = createRequire(import.meta.url)
 const { answers, waitForServer, backendCommand, keptFromKiln } = require('./server-start.cjs')
@@ -67,5 +70,12 @@ describe('keptFromKiln', () => {
   })
   it('uses the new folder once it exists', () => {
     expect(keptFromKiln('/h/.fornax-studio', '/h/.kiln-studio', only('/h/.kiln-studio', '/h/.fornax-studio'))).toBe('/h/.fornax-studio')
+  })
+  it('looks at the disk by default', () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kept-'))
+    fs.mkdirSync(path.join(home, '.kiln-studio'))
+    fs.writeFileSync(path.join(home, '.fornax-studio'), '')  // a file, not a folder: not the new home
+    expect(keptFromKiln(path.join(home, '.fornax-studio'), path.join(home, '.kiln-studio'))).toBe(path.join(home, '.kiln-studio'))
+    fs.rmSync(home, { recursive: true })
   })
 })

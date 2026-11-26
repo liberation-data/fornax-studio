@@ -64,7 +64,7 @@ function backendCommand({ env = process.env, roots, port, parentPid, exists = fs
 
 // The folder to use for something that was named after Kiln before the rename: the new one, or the old one when only
 // that exists, so settings and outputs from before the rename stay where they are.
-function keptFromKiln(dir, old, isDirectory = p => { try { return require('fs').statSync(p).isDirectory(); } catch { return false; } }) {
+function keptFromKiln(dir, old, isDirectory = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } }) {
   return !isDirectory(dir) && isDirectory(old) ? old : dir;
 }
 
