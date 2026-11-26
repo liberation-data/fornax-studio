@@ -105,18 +105,23 @@ jobs:
           test -x "$server/jre/bin/java"
           "$server/jre/bin/java" -version
 
-      # The packages pull in a Vulkan driver (Mesa's, unless NVIDIA's is there) and the loader. Check that a stock
-      # Ubuntu and a stock Fedora can resolve every dependency, without installing anything.
+      # The packages pull in a Vulkan driver (Mesa's, unless NVIDIA's is there) and the loader. Check that the driver
+      # dependency made it into both packages, and that a stock Ubuntu and a stock Fedora can resolve every dependency,
+      # without installing anything. Weak dependencies are off: the loader itself only recommends Mesa's driver, which
+      # would otherwise hide a missing hard dependency.
       - name: Check the packages' dependencies resolve
         run: |
           set -euo pipefail
-          sudo apt-get install --dry-run ./dist/*.deb > "$RUNNER_TEMP/apt.log" || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
+          dpkg-deb -f dist/*.deb Depends | grep -F 'mesa-vulkan-drivers | vulkan-icd'
+          sudo apt-get install --dry-run --no-install-recommends ./dist/*.deb > "$RUNNER_TEMP/apt.log" \
+            || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
           grep -E '^Inst (mesa-vulkan-drivers|libvulkan1)' "$RUNNER_TEMP/apt.log" || echo "(the runner already has them)"
           rpm=$(ls dist/*.rpm)
+          rpm -qp --requires "$rpm" | grep -Fx '(mesa-vulkan-drivers or xorg-x11-drv-nvidia-libs or nvidia-driver-libs)'
           docker run --rm -v "$PWD/dist:/dist:ro" fedora:latest \
-            dnf install -y --setopt=tsflags=test "/dist/$(basename "$rpm")" > "$RUNNER_TEMP/dnf.log" 2>&1 \
-            || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
-          grep -E 'mesa-vulkan-drivers|vulkan-loader' "$RUNNER_TEMP/dnf.log"
+            dnf install -y --setopt=tsflags=test --setopt=install_weak_deps=False "/dist/$(basename "$rpm")" \
+            > "$RUNNER_TEMP/dnf.log" 2>&1 || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
+          grep -E '^ *mesa-vulkan-drivers ' "$RUNNER_TEMP/dnf.log" || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
 
       # Start the packaged app under a virtual display, with every kind of work stubbed (no GPU on the runner, no
       # models), and wait for the studio's server and Kiln's backend to answer: the backend started by the app, on the

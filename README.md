@@ -98,8 +98,8 @@ GitHub Actions builds what a release ships, from the Kiln commit in `kiln.ref` (
 - `kiln-backend.yml`, called by the two below once per platform: checks out Kiln, builds the engines the studio runs
   (`native/build.sh vulkan|metal llama sd acestep yue2`, cached), the backend jar and its jlink'd Java runtime, and
   checks that all four libraries are there and that the backend starts on it.
-- `linux-build.yml`: a `.deb` and an `.rpm`, x64, Vulkan. They depend on the Vulkan loader, a Vulkan driver (Mesa's, unless NVIDIA's is already
-  there) and OpenMP, so `dnf` or `apt` installs whatever is missing.
+- `linux-build.yml`: a `.deb` and an `.rpm`, x64, Vulkan. They depend on the Vulkan loader, a Vulkan driver (Mesa's,
+  unless NVIDIA's is already there) and OpenMP, so `dnf` or `apt` installs whatever is missing.
 - `macos-signed.yml`: a `.dmg` and a `.zip` for Apple silicon and for Intel, Metal, signed with a Developer ID and
   notarized, in the `apple-signing` environment.
 
