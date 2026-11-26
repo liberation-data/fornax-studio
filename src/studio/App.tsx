@@ -31,7 +31,7 @@ const LIMITS: Record<string, WindowLimits> = {
 }
 
 function infoOf(id: string): ReactNode {
-  if (id === 'models') return 'What in the Hugging Face cache Kiln can run: every GGUF chat model, and the image, song and video presets whose files are all downloaded. Kiln’s ModelPool keeps what is loaded between uses, within a memory budget.'
+  if (id === 'models') return 'What in the Hugging Face cache Kiln can run: every GGUF chat model, and the image, song, video and vision presets whose files are all downloaded. Kiln’s ModelPool keeps what is loaded between uses, within a memory budget.'
   if (id === 'chat') return 'A GGUF model through llama.cpp, streamed token by token from a Java callback. Tools offers the model a clock and a calculator through LlamaModel.chatJson, the OpenAI-style tool-calling API.'
   if (id === 'image') return 'stable-diffusion.cpp through Kiln’s DiffusionModel: FLUX.2 [klein] and Qwen-Image. Each step is reported as it finishes.'
   if (id === 'song') return 'ACE-Step 1.5 through Kiln’s AceStepModel, or YuE2 through its Yue2Model: a style and lyrics in, a 48 kHz stereo song out. YuE2’s weights are CC BY-NC 4.0: no commercial use.'

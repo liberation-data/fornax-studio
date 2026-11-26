@@ -11,8 +11,8 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
 
 ## Windows
 
-- **Models**: what in the Hugging Face cache Kiln can run (every GGUF chat model, and the image, song and video presets
-  whose files are all there), which are loaded in Kiln's `ModelPool`, the memory they hold against its budget, and the GPU's
+- **Models**: what in the Hugging Face cache Kiln can run (every GGUF chat model, and the image, song, video and vision
+  presets whose files are all there), which are loaded in Kiln's `ModelPool`, the memory they hold against its budget, and the GPU's
   own memory use. Load and unload from here.
 - **Chat**: a conversation streamed token by token, with tokens per second, time to the first token and token counts.
   **Thinking** shows Qwen3's reasoning (off sends Qwen3's `/no_think`). **Tools** offers the model a clock and a
