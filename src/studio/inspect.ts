@@ -109,6 +109,18 @@ export function inspectRequest(model: string, form: { image: string; prompt: str
   return { model, image: form.image, prompt: form.prompt.trim(), ...(form.schema ? { schema: form.schema } : {}) }
 }
 
+/** What an OCR model read, which model read it, and in how long. */
+export interface Read {
+  text: string
+  by: string
+  seconds: number | null
+}
+
+/** The read, from the structuring status (while another model fills the schema) or from done; null when none was. */
+export function readOf(from: { read?: string | null; readSeconds?: number | null }, by: string): Read | null {
+  return from.read == null ? null : { text: from.read, by, seconds: from.readSeconds ?? null }
+}
+
 /**
  * Where a look is, in words: loading a model, the reply's rate once tokens come, else reading the image, or (an OCR
  * model having read it) filling the schema, named by the model that fills it.

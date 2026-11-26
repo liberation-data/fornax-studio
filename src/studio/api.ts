@@ -68,6 +68,9 @@ export interface LoadStatus {
   model?: string
   sizeBytes?: number
   loadSeconds?: number
+  /** With structuring: what the OCR model read, and how long it took. */
+  read?: string
+  readSeconds?: number
 }
 
 export interface ChatDone {

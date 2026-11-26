@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Model } from './api'
 import { Prose } from './Inspect'
-import { PRESETS, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema } from './inspect'
+import { PRESETS, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema, readOf } from './inspect'
 import { defaultModel } from './state'
 
 describe('presets', () => {
@@ -107,6 +107,12 @@ describe('a look', () => {
     // The filler loaded, and reading the text before its first token: still filling the schema, not reading the image.
     expect(inspectPhase({ state: 'loaded', model: 'vision:qwen3-vl-4b' }, name, 'Qwen3-VL 4B', null)).toBe('filling the schema with Qwen3-VL 4B…')
     expect(inspectPhase({ state: 'generating' }, name, 'Qwen3-VL 4B', 42)).toBe('42.0 tok/s')
+  })
+
+  it('times an OCR read from the structuring status, while the schema is still being filled', () => {
+    expect(readOf({ read: 'INVOICE 42', readSeconds: 1.5 }, 'PaddleOCR-VL 1.6'))
+      .toEqual({ text: 'INVOICE 42', by: 'PaddleOCR-VL 1.6', seconds: 1.5 })
+    expect(readOf({ read: null, readSeconds: null }, 'x')).toBeNull()
   })
 })
 
