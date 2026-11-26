@@ -18,7 +18,11 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
 
 - **Models**: what in the Hugging Face cache Fornax can run (every GGUF chat model, and the image, song, video and vision
   presets whose files are all there), which are loaded in Fornax's `ModelPool`, the memory they hold against its budget, and the GPU's
-  own memory use. Load and unload from here.
+  own memory use. Load and unload from here. **Get models** lists the models Fornax knows by name that aren't all on
+  disk: before each download a sheet gives its licence and its size against the free disk, and the download shows its
+  rate and time left, carries on when the window closes, and resumes where it stopped. A gated repo (Gemma, LTX) needs
+  its terms accepted on Hugging Face and a read token: the app keeps the token in the system's keychain and gives it to
+  the backend, never to the page (with no keychain, or in a browser, set `HF_TOKEN` instead).
 - **Chat**: a conversation streamed token by token, with tokens per second, time to the first token and token counts.
   **Thinking** shows Qwen3's reasoning (off sends Qwen3's `/no_think`). **Tools** offers the model a clock and a
   calculator through `LlamaModel.chatJson`: each call it makes is run by the backend and its answer handed back.
@@ -100,6 +104,7 @@ Settings, from the environment:
 | Variable | |
 |---|---|
 | `HF_HUB_CACHE` / `HF_HOME` | where the models are (default `~/.cache/huggingface/hub`) |
+| `HF_TOKEN` | a Hugging Face token for gated repos, when the app can't keep one in the keychain (or in a browser) |
 | `FORNAX_STUDIO_STUB` | kinds of work answered by a stub that loads nothing, as `image,song,video` (or `chat`, `vision`): for trying the app without the GPU |
 | `FORNAX_STUDIO_FFMPEG` | the ffmpeg that makes a video's .mp4 (else the `PATH`'s) |
 | `GGML_VK_MAX_NODES_PER_SUBMIT` | Vulkan only: 8 unless set, so an LTX decode stays under amdgpu's compute timeout |

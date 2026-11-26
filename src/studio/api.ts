@@ -168,3 +168,80 @@ export interface InspectDone extends ChatDone {
   filledBy: string | null
   stub: boolean
 }
+
+// ---- getting models (the backend's /api/catalogue and /api/models/pull) ----
+
+/** How much of a set is on disk: all of it, some (an interrupted download, which the next one resumes), or none. */
+export type SetState = 'PRESENT' | 'PARTIAL' | 'MISSING'
+
+export interface CatalogueSet {
+  /** Fornax's name for the set ("flux2-klein"); the studio's id for it is among its aliases ("image:flux2-klein"). */
+  id: string
+  aliases: string[]
+  kind: 'chat' | 'vision' | 'speech' | 'transcription' | 'image' | 'song' | 'video'
+  title: string
+  engine: string
+  /** Where the weights' licence limits their use, in words; null when it doesn't. */
+  license: string | null
+  /** The repo is gated: its terms must be accepted on Hugging Face, and a token given, before it downloads. */
+  gated: boolean
+  termsUrl: string | null
+  state: SetState
+  bytesOnDisk: number
+  parts: { role: string; repo: string; file: string; state: SetState; bytesOnDisk: number; size: number }[]
+  downloading: boolean
+  progress: PullProgress | null
+}
+
+export interface PullProgress {
+  id: string
+  role: string
+  file: string
+  index: number
+  count: number
+  phase: 'CHECKING' | 'PRESENT' | 'WAITING' | 'DOWNLOADING' | 'DONE'
+  bytesDone: number
+  bytesTotal: number
+  setBytesDone: number
+  setBytesTotal: number
+  /** 0 to 1, or -1 when the size isn't known. */
+  fraction: number
+  bytesPerSecond: number
+  etaSeconds: number | null
+}
+
+export interface PullPlan {
+  id: string
+  complete: boolean
+  bytesToDownload: number
+  bytesTotal: number
+  freeBytes: number
+  license: string | null
+  gated: boolean
+}
+
+/** Why a download or plan failed: a reason the Hub gave (DISK_SPACE, ACCESS_DENIED, NOT_FOUND, ...) or IO. */
+export interface PullFailure {
+  id: string
+  message: string
+  reason: string
+  termsUrl?: string
+}
+
+export const loadCatalogue = (): Promise<{ models: CatalogueSet[] }> =>
+  fetch('/api/catalogue', { cache: 'no-store' }).then(r => json<{ models: CatalogueSet[] }>(r))
+
+/** What getting the set would download, and the free disk; a gated set without a token fails with its termsUrl. */
+export async function planPull(id: string): Promise<PullPlan> {
+  const res = await fetch('/api/models/plan', { method: 'POST', body: JSON.stringify({ id }), cache: 'no-store' })
+  const body = (await res.json().catch(() => ({}))) as PullPlan & Partial<PullFailure> & { error?: string }
+  if (!res.ok) throw Object.assign(new Error(body.message ?? body.error ?? `${res.status} ${res.statusText}`), { failure: body })
+  return body
+}
+
+export const cancelPull = (id: string) =>
+  fetch('/api/models/pull/cancel', { method: 'POST', body: JSON.stringify({ id }) }).then(r => json<{ cancelled: boolean }>(r))
+
+/** Whether the desktop app has given the backend a Hugging Face token (the page never sees the token itself). */
+export const hubStatus = (): Promise<{ tokenSet: boolean }> =>
+  fetch('/api/hub', { cache: 'no-store' }).then(r => json<{ tokenSet: boolean }>(r))

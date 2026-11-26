@@ -118,6 +118,7 @@
       "build/icon.png",
       "preload.cjs",
       "server-start.cjs",
+      "hub-token.cjs",
       "fornax-command.cjs",
       "package.json",
       "!node_modules/**/*"
