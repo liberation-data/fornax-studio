@@ -2,11 +2,12 @@
 // studio's standalone Next.js server in Electron's own Node and opens a window on it. The page talks only to the Next.js
 // server, which passes /api/* on to the backend, so the browser app works the same from npm start.
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell, utilityProcess } = require('electron');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { answers, waitForServer, backendCommand } = require('./server-start.cjs');
+const kilnCommand = require('./kiln-command.cjs');
 
 const PORT = process.env.PORT ?? '5190';
 const URL = `http://localhost:${PORT}`;
@@ -71,7 +72,7 @@ async function startBackend() {
     }
     throw new Error(`Another server already answers at ${BACKEND}. Stop it, or set KILN_STUDIO_PORT to a free port.`);
   }
-  const roots = [process.resourcesPath, app.getAppPath()].filter(Boolean);
+  const roots = appRoots();
   const { command, args, env } = backendCommand({ roots, port: BACKEND_PORT, parentPid: process.pid });
   log('[Electron] Starting the Kiln backend:', command, args.join(' '));
   backendProcess = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -176,6 +177,136 @@ function createWindow() {
   }
 }
 
+/*
+ * The kiln command: "Install kiln Command…" writes kiln-cli's launcher, rendered with this app's Java, jars and
+ * natives, into a folder on PATH (kiln-command.cjs has the rendering and the checks). Linux: ~/.local/bin. macOS:
+ * /usr/local/bin, with an administrator's password when it isn't writable, or ~/.local/bin. Windows: TODO, there is no
+ * Windows build yet (see installTargets).
+ */
+function appRoots() {
+  return [process.resourcesPath, app.getAppPath()].filter(Boolean);
+}
+
+function cliItems() {
+  const cli = kilnCommand.bundledCli({ roots: appRoots() });
+  if (kilnCommand.installTargets({ platform: process.platform, home: os.homedir() }).length === 0) return [];
+  const missing = 'This build of Kiln Studio has no kiln command: it was built from a Kiln without kiln-cli.';
+  return [
+    {
+      label: cli ? 'Install kiln Command…' : 'Install kiln Command… (not in this build)',
+      enabled: Boolean(cli), toolTip: cli ? 'Put the kiln command on your PATH, so a terminal can run kiln' : missing,
+      click: () => installKiln(cli).catch(error => commandError('install', error)),
+    },
+    {
+      label: 'Uninstall kiln Command',
+      click: () => uninstallKiln().catch(error => commandError('uninstall', error)),
+    },
+  ];
+}
+
+function commandError(what, error) {
+  logError(`[Electron] Could not ${what} the kiln command:`, error);
+  dialog.showMessageBox({ type: 'error', message: `Kiln Studio could not ${what} the kiln command`, detail: error.message });
+}
+
+/** Runs the sh command as an administrator, after macOS asks for the password. Resolves false when cancelled. */
+function runAsAdmin(command) {
+  return new Promise((resolve, reject) => {
+    execFile('osascript', ['-e', kilnCommand.adminScript(command)], (error, stdout, stderr) => {
+      if (!error) return resolve(true);
+      if (/-128/.test(stderr)) return resolve(false);  // the user cancelled the password prompt
+      reject(new Error(stderr.trim() || error.message));
+    });
+  });
+}
+
+/** The PATH a new terminal gets: the login shell's (a desktop app's own PATH is often shorter), else this process's. */
+function terminalPath() {
+  const sh = process.env.SHELL || '/bin/sh';
+  return new Promise(resolve => {
+    execFile(sh, ['-ilc', 'printf "\n__KILN_PATH__%s__KILN_PATH__\n" "$PATH"'], { timeout: 5000 }, (error, stdout) => {
+      const found = /__KILN_PATH__(.*)__KILN_PATH__/.exec(stdout ?? '');
+      resolve(found ? found[1] : process.env.PATH ?? '');
+    });
+  });
+}
+
+const tilde = p => (p.startsWith(os.homedir() + path.sep) ? `~${p.slice(os.homedir().length)}` : p);
+
+async function installKiln(cli) {
+  const problem = kilnCommand.locationProblem({ platform: process.platform, resourcesPath: cli.root });
+  if (problem) {
+    await dialog.showMessageBox({ type: 'warning', message: 'The kiln command can\'t be installed from here', detail: problem });
+    return;
+  }
+  const targets = kilnCommand.installTargets({ platform: process.platform, home: os.homedir() });
+  let target = targets[0];
+  if (targets.length > 1) {
+    const { response } = await dialog.showMessageBox({
+      type: 'question', message: 'Where should the kiln command go?',
+      detail: `${targets[0].dir} is on every terminal's PATH, and may ask for an administrator's password.\n${tilde(targets[1].dir)} is just for you, and needs no password, but may need adding to your PATH.`,
+      buttons: targets.map(t => tilde(t.dir)).concat('Cancel'), defaultId: 0, cancelId: targets.length,
+    });
+    if (response === targets.length) return;
+    target = targets[response];
+  }
+  const file = path.join(target.dir, 'kiln');
+  if (kilnCommand.launcherState(file) === 'other') {
+    const { response } = await dialog.showMessageBox({
+      type: 'warning', message: `There is already a kiln command at ${tilde(file)}`,
+      detail: 'Kiln Studio didn\'t install it. Replace it with Kiln Studio\'s?',
+      buttons: ['Replace', 'Cancel'], defaultId: 1, cancelId: 1,
+    });
+    if (response !== 0) return;
+  }
+  const content = kilnCommand.launcherFor(cli);
+  try {
+    kilnCommand.writeLauncher(file, content);
+  } catch (error) {
+    if (!target.admin || !['EACCES', 'EPERM'].includes(error.code)) throw error;
+    // /usr/local/bin is root's: write the launcher to a temporary file, then copy it there as an administrator.
+    const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kiln-studio-')), 'kiln');
+    fs.writeFileSync(tmp, content, { mode: 0o755 });
+    const q = kilnCommand.shellQuote;
+    const done = await runAsAdmin(`mkdir -p ${q(target.dir)} && cp ${q(tmp)} ${q(file)} && chmod 755 ${q(file)}`)
+      .finally(() => fs.rmSync(path.dirname(tmp), { recursive: true, force: true }));
+    if (!done) return;
+  }
+  log('[Electron] Installed the kiln command at', file);
+  const onPath = kilnCommand.onPath(target.dir, await terminalPath());
+  const pathNote = onPath ? '' : `\n\n${tilde(target.dir)} isn't on your PATH yet. Add this line to your shell's profile (~/.bashrc, ~/.zshrc), then open a new terminal:\n\n    export PATH="$HOME/.local/bin:$PATH"`;
+  await dialog.showMessageBox({
+    type: 'info', message: 'The kiln command is installed',
+    detail: `${tilde(file)} runs on Kiln Studio's own Java, from ${cli.root}. If you move Kiln Studio, install the command again.\n\nTry, in a new terminal:\n\n    kiln list${pathNote}`,
+  });
+}
+
+async function uninstallKiln() {
+  const targets = kilnCommand.installTargets({ platform: process.platform, home: os.homedir() });
+  const removed = [];
+  const left = [];
+  for (const target of targets) {
+    const file = path.join(target.dir, 'kiln');
+    const state = kilnCommand.launcherState(file);
+    if (state === 'other') left.push(file);
+    if (state !== 'studio') continue;
+    try {
+      kilnCommand.removeLauncher(file);
+    } catch (error) {
+      if (!target.admin || !['EACCES', 'EPERM'].includes(error.code)) throw error;
+      if (!(await runAsAdmin(`rm -f ${kilnCommand.shellQuote(file)}`))) return;
+    }
+    log('[Electron] Removed the kiln command at', file);
+    removed.push(file);
+  }
+  const others = left.length ? `\n\nLeft ${left.map(tilde).join(' and ')} alone: Kiln Studio didn't install it.` : '';
+  await dialog.showMessageBox({
+    type: 'info',
+    message: removed.length ? 'The kiln command is uninstalled' : 'Kiln Studio hasn\'t installed a kiln command',
+    detail: (removed.length ? `Removed ${removed.map(tilde).join(' and ')}.` : `There is no kiln command of Kiln Studio's in ${targets.map(t => tilde(t.dir)).join(' or ')}.`) + others,
+  });
+}
+
 function setMenu() {
   const isMac = process.platform === 'darwin';
   const template = [
@@ -183,6 +314,8 @@ function setMenu() {
       label: app.getName(),
       submenu: [
         { role: 'about' },
+        { type: 'separator' },
+        ...cliItems(),
         { type: 'separator' },
         { label: 'Open Log File', click: () => shell.showItemInFolder(logPath) },
         { type: 'separator' },
@@ -192,7 +325,7 @@ function setMenu() {
         { type: 'separator' },
         { role: 'quit' },
       ],
-    }] : []),
+    }] : [{ label: 'File', submenu: [...cliItems(), { type: 'separator' }, { role: 'quit' }] }]),
     {
       label: 'Edit',
       submenu: [

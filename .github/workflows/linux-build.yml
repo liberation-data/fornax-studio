@@ -28,6 +28,7 @@ on:
       - main.cjs
       - preload.cjs
       - server-start.cjs
+      - kiln-command.cjs
       - build/**
       - scripts/**
 
@@ -122,6 +123,20 @@ jobs:
             dnf install -y --setopt=tsflags=test --setopt=install_weak_deps=False "/dist/$(basename "$rpm")" \
             > "$RUNNER_TEMP/dnf.log" 2>&1 || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
           grep -E '^ *mesa-vulkan-drivers ' "$RUNNER_TEMP/dnf.log" || { cat "$RUNNER_TEMP/dnf.log"; exit 1; }
+
+      # The .deb writes /usr/bin/kiln, the kiln command on the app's own Java, and removing it takes that away. Installed
+      # for real here, then removed. Skipped when this Kiln has no kiln-cli.
+      - name: Check the .deb installs and removes the kiln command
+        run: |
+          set -euo pipefail
+          if [ ! -d dist/linux-unpacked/resources/server/kiln-cli ]; then echo "No kiln command in this build"; exit 0; fi
+          sudo apt-get install -y -qq --no-install-recommends ./dist/*.deb > /dev/null
+          head -n 2 /usr/bin/kiln
+          head -n 5 /usr/bin/kiln | grep -q '^# kiln-studio-launcher'
+          env -u JAVA_HOME PATH=/usr/bin:/bin kiln --version
+          env -u JAVA_HOME PATH=/usr/bin:/bin HF_HUB_CACHE="$RUNNER_TEMP/hf" kiln list
+          sudo apt-get remove -y -qq kiln-studio > /dev/null
+          if [ -e /usr/bin/kiln ]; then echo "::error::/usr/bin/kiln is still there after removing the package"; exit 1; fi
 
       # Start the packaged app under a virtual display, with every kind of work stubbed (no GPU on the runner, no
       # models), and wait for the studio's server and Kiln's backend to answer: the backend started by the app, on the
