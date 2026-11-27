@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Model } from './api'
 import { Prose } from './Inspect'
-import { PRESETS, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema, readOf } from './inspect'
+import { PRESETS, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema, readOf } from './inspectPresets'
 import { defaultModel } from './state'
 
 describe('presets', () => {
