@@ -339,6 +339,15 @@ function setMenu() {
       ],
     },
     { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'zoom' }, ...(isMac ? [{ role: 'front' }] : [{ role: 'close' }])] },
+    {
+      // Stars all go to the library's repo, so the one count people see on GitHub and fornax4j.org grows.
+      role: 'help',
+      submenu: [
+        { label: 'Fornax Website', click: () => shell.openExternal('https://fornax4j.org') },
+        { label: 'Star Fornax on GitHub', click: () => shell.openExternal('https://github.com/liberation-data/fornax') },
+        { label: 'Report an Issue…', click: () => shell.openExternal('https://github.com/liberation-data/fornax-studio/issues/new') },
+      ],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
