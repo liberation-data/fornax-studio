@@ -150,9 +150,13 @@ its private half in this repository's `KILN_DEPLOY_KEY` secret.
 ## Tests
 
 ```sh
-npm test                                   # the page's helpers, the proxy, how the app starts the backend, the fornax command's launcher
+npm test                                   # the page's helpers, the proxy, how the app starts the backend, the fornax command's launcher, file names
 ./gradlew :fornax-studio-server:test         # in the Fornax checkout: every route, over HTTP, with the engines stubbed
 ```
+
+`checks.yml` runs `npm run typecheck` and `npm test` on every pull request and on main. Among them, `file-names.test.mjs`
+fails on tracked paths that differ only in case (such as `Inspect.tsx` and `inspect.ts`), which a case-blind file system,
+macOS's, takes for one.
 
 ## License
 

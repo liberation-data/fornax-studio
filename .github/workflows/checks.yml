@@ -14,7 +14,13 @@ permissions:
 
 jobs:
   checks:
+    name: Type check and test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # A newer run replaces an older one on the same ref.
+    concurrency:
+      group: checks-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
