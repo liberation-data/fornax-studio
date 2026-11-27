@@ -1,7 +1,7 @@
 {
   "name": "fornax-studio",
   "productName": "Fornax Studio",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "main.cjs",
   "private": true,
   "description": "Try models with Fornax: chat, images, songs and video, on your GPU, in one JVM.",
