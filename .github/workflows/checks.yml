@@ -1,0 +1,41 @@
+name: Checks
+
+# The tests and the type check, on every pull request and on main. The build workflows only run on a pull request that
+# changes the packaging, and run neither, so without this nothing in CI runs file-names.test.mjs, which guards the
+# macOS build against file names that differ only in case.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Type check and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # A newer run replaces an older one on the same ref.
+    concurrency:
+      group: checks-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
