@@ -73,6 +73,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
+          # Gradle's plugins and dependencies from the last run, so a build doesn't fetch them all from the Plugin Portal
+          # and Maven Central each time; both have refused GitHub's runners (rate limits, a plugin briefly not found).
+          cache: gradle
+          cache-dependency-path: |
+            fornax/**/*.gradle*
+            fornax/gradle/wrapper/gradle-wrapper.properties
 
       - name: Install build tools (Linux)
         if: runner.os == 'Linux'
