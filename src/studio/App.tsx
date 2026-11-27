@@ -58,7 +58,7 @@ const icon = (path: string) => (
 )
 
 const DOCK = [
-  dockItem({ id: 'models', label: 'Models', description: 'What is in the cache, what is loaded, and the memory in use', icon: icon('M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5') }),
+  dockItem({ id: 'models', label: 'Models', description: 'What is in the cache, what is loaded, the memory in use, and models to get', icon: icon('M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5') }),
   dockItem({ id: 'chat', label: 'Chat', description: 'Chat with a GGUF model, and watch it call tools', icon: icon('M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12zM8 12h.01M12 12h.01M16 12h.01') }),
   dockItem({ id: 'image', label: 'Image', description: 'A prompt in, an image out', icon: icon('M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM20 15l-5-5L5 20') }),
   dockItem({ id: 'song', label: 'Song', description: 'A style and lyrics in, a song out', icon: icon('M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z') }),

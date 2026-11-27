@@ -4,7 +4,8 @@ import { Button, Led, Pane, PaneHeader, Section, Table } from '@liberation-data/
 import type { Column } from '@liberation-data/desk/react'
 import { useMemo } from 'react'
 import type { GpuMemory, Model } from './api'
-import { bytes, seconds } from './format'
+import { bytes, partsWords, seconds } from './format'
+import { GetModels } from './GetModels'
 import { licenseName } from './parts'
 import { useStudio } from './state'
 
@@ -41,7 +42,7 @@ function state(m: Model, pending: boolean): { color: 'green' | 'amber' | 'off' |
   return { color: 'off', words: 'In the cache' }
 }
 
-/** The models Fornax can run from the Hugging Face cache, which are loaded, and the memory they hold. */
+/** The models Fornax can run from the Hugging Face cache, which are loaded, the memory they hold, and the ones to get. */
 export function Models() {
   const { status, problem, refresh, load, unload, pending } = useStudio()
 
@@ -60,7 +61,7 @@ export function Models() {
           <span>{m.name}{m.stub && <span className="studio-badge">stub</span>}{m.license && <span className="studio-badge" title={m.license}>{licenseName(m.license)}</span>}</span>
           <span className="desk-text-caption desk-text-muted">
             {m.available
-              ? m.parts.length === 1 ? `${m.parts[0]?.repo} · ${m.parts[0]?.file}` : `${m.parts.length} files: ${m.parts.map(p => p.role).join(', ')}`
+              ? partsWords(m.parts)
               : `Missing: ${m.parts.filter(p => !p.present).map(p => `${p.repo} ${p.file}`).join('; ')}`}
           </span>
         </div>
@@ -107,13 +108,14 @@ export function Models() {
             </p>
           </Section>
         )}
+        <GetModels onGot={refresh} />
         <Section title="In the cache">
           <Table
             label="Models in the cache"
             rows={status?.models ?? []}
             columns={columns}
             rowId={m => m.id}
-            empty={status ? 'Nothing in the cache that Fornax can run. Download a GGUF with `hf download`.' : 'Reading the cache…'}
+            empty={status ? 'Nothing in the cache that Fornax can run yet. Get one above.' : 'Reading the cache…'}
           />
         </Section>
       </div>

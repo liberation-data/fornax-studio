@@ -18,7 +18,11 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
 
 - **Models**: what in the Hugging Face cache Fornax can run (every GGUF chat model, and the image, song, video and vision
   presets whose files are all there), which are loaded in Fornax's `ModelPool`, the memory they hold against its budget, and the GPU's
-  own memory use. Load and unload from here.
+  own memory use. Load and unload from here. **Get models** lists the models Fornax knows by name that aren't all on
+  disk: before each download a sheet gives its licence and its size against the free disk, and the download shows its
+  rate and time left, carries on when the window closes, and resumes where it stopped. A gated repo (Gemma, LTX) needs
+  its terms accepted on Hugging Face and a read token: the app keeps the token in the system's keychain and gives it to
+  the backend, never to the page (with no keychain, or in a browser, set `HF_TOKEN` instead).
 - **Chat**: a conversation streamed token by token, with tokens per second, time to the first token and token counts.
   **Thinking** shows Qwen3's reasoning (off sends Qwen3's `/no_think`). **Tools** offers the model a clock and a
   calculator through `LlamaModel.chatJson`: each call it makes is run by the backend and its answer handed back.
@@ -75,6 +79,13 @@ streamed as server-sent events, models kept in Fornax's `ModelPool`. The page ta
 passes `/api/*` on as it is, so the browser app works the same from `npm start`. The backend is told the app's pid and
 exits with it, so a model never stays on the GPU after the app has gone.
 
+Listening on loopback doesn't keep out web pages in your browser, so both servers check who is calling. The studio's
+server answers `/api/*` only for a loopback `Host` (not a DNS-rebound name), an `Origin` that is its own, and a
+`Sec-Fetch-Site` of `same-origin` or `none`. The backend refuses any `Origin` and any non-loopback `Host`. The app also
+makes a secret each launch and passes it, in the environment, to both servers as `FORNAX_STUDIO_SECRET`. The studio's
+server adds it to every request it passes on, and the backend refuses a request without it. `npm run electron:dev` makes
+no secret, so it works with a backend and dev server started on their own.
+
 ## Running it
 
 Needs Node 22+, Java 25, and Fornax's native libraries (`native/build.sh` in the Fornax checkout).
@@ -100,6 +111,7 @@ Settings, from the environment:
 | Variable | |
 |---|---|
 | `HF_HUB_CACHE` / `HF_HOME` | where the models are (default `~/.cache/huggingface/hub`) |
+| `HF_TOKEN` | a Hugging Face token for gated repos, when the app can't keep one in the keychain (or in a browser) |
 | `FORNAX_STUDIO_STUB` | kinds of work answered by a stub that loads nothing, as `image,song,video` (or `chat`, `vision`): for trying the app without the GPU |
 | `FORNAX_STUDIO_FFMPEG` | the ffmpeg that makes a video's .mp4 (else the `PATH`'s) |
 | `GGML_VK_MAX_NODES_PER_SUBMIT` | Vulkan only: 8 unless set, so an LTX decode stays under amdgpu's compute timeout |
@@ -110,6 +122,7 @@ Settings, from the environment:
 | `FORNAX_CLI_HOME` | for `npm run server:build`: the Fornax checkout to build the fornax command from (default `FORNAX_HOME`) |
 | `FORNAX_STUDIO_JAR`, `FORNAX_LIBRARY_PATH`, `FORNAX_STUDIO_JAVA` | to run another backend jar, libraries or Java |
 | `PORT`, `FORNAX_STUDIO_PORT` | the page's and the backend's ports (5190, 5191) |
+| `FORNAX_STUDIO_SECRET` | set by the app each launch; when set, the backend answers only requests that carry it, and the studio's server adds it |
 
 `npm run package:linux` packs the app with electron-builder, with the backend jar, the native libraries and, after
 `npm run server:jre`, a Java runtime as resources (in `server/`). `server:jre` jlinks one from the JDK at `JAVA_HOME`

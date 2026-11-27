@@ -21,6 +21,13 @@ describe('backendCommand', () => {
     expect(c.env).toMatchObject({ FORNAX_STUDIO_PORT: '5191', FORNAX_STUDIO_PARENT_PID: '42', HF_HUB_CACHE: '/hf', GGML_VK_MAX_NODES_PER_SUBMIT: '8' })
   })
 
+  it('passes the launch\'s secret in the environment, never on the command line', () => {
+    const c = backendCommand({ env: {}, roots: ['/app'], port: 1, parentPid: 1, secret: 's3cret', exists: p => p.endsWith('.jar') })
+    expect(c.env.FORNAX_STUDIO_SECRET).toBe('s3cret')
+    expect(c.args.join(' ')).not.toContain('s3cret')
+    expect(backendCommand({ env: {}, roots: ['/app'], port: 1, parentPid: 1, exists: p => p.endsWith('.jar') }).env.FORNAX_STUDIO_SECRET).toBeUndefined()
+  })
+
   it('keeps a GGML_VK_MAX_NODES_PER_SUBMIT of the environment\'s own', () => {
     const c = backendCommand({ env: { GGML_VK_MAX_NODES_PER_SUBMIT: '100' }, roots: ['/app'], port: 1, parentPid: 1, exists: p => p.endsWith('.jar') })
     expect(c.env.GGML_VK_MAX_NODES_PER_SUBMIT).toBe('100')

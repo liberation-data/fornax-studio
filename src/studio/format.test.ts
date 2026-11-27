@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bytes, rate, seconds, splitThinking } from './format'
+import { bytes, partsWords, rate, seconds, splitThinking } from './format'
 
 describe('format', () => {
   it('sizes', () => {
@@ -22,5 +22,12 @@ describe('format', () => {
     expect(splitThinking('<think>\nstill going')).toEqual({ thinking: 'still going', answer: '', thinkingOpen: true })
     expect(splitThinking('Plain')).toEqual({ thinking: null, answer: 'Plain', thinkingOpen: false })
     expect(splitThinking('<think>\n\n</think>\n\nShort')).toEqual({ thinking: '', answer: 'Short', thinkingOpen: false })
+  })
+})
+
+describe('partsWords', () => {
+  it('names one file by its repo, and several by their roles', () => {
+    expect(partsWords([{ role: 'model', repo: 'Qwen/Qwen3-0.6B-GGUF', file: 'Qwen3-0.6B-Q8_0.gguf' }])).toBe('Qwen/Qwen3-0.6B-GGUF · Qwen3-0.6B-Q8_0.gguf')
+    expect(partsWords([{ role: 'diffusion_model', repo: 'a', file: 'x' }, { role: 'vae', repo: 'b', file: 'y' }])).toBe('2 files: diffusion_model, vae')
   })
 })

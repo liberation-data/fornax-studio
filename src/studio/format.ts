@@ -21,6 +21,11 @@ export function seconds(s: number | null | undefined): string {
   return `${m} min ${Math.round(s - m * 60)} s`
 }
 
+/** A model's files in words: "repo · file" for one, or how many and their roles: "3 files: diffusion_model, vae, llm". */
+export function partsWords(parts: readonly { role: string; repo: string; file: string }[]): string {
+  return parts.length === 1 ? `${parts[0]?.repo} · ${parts[0]?.file}` : `${parts.length} files: ${parts.map(p => p.role).join(', ')}`
+}
+
 export function rate(perSecond: number | null | undefined, unit = 'tok/s'): string {
   if (perSecond == null || !Number.isFinite(perSecond) || perSecond <= 0) return '—'
   return `${perSecond >= 100 ? perSecond.toFixed(0) : perSecond.toFixed(1)} ${unit}`

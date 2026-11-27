@@ -45,7 +45,7 @@ async function waitForServer(url, { timeoutMs = 30000, intervalMs = 250, stopped
  * GGML_VK_MAX_NODES_PER_SUBMIT is 8 unless set: with ggml-vulkan's 100, one LTX video decode can outlast amdgpu's
  * compute timeout and lose the GPU (Fornax's docs/engine-notes.md). Other GPU backends don't read it.
  */
-function backendCommand({ env = process.env, roots, port, parentPid, exists = fs.existsSync }) {
+function backendCommand({ env = process.env, roots, port, parentPid, secret, exists = fs.existsSync }) {
   const jar = env.FORNAX_STUDIO_JAR || roots.map(root => path.join(root, 'server', 'fornax-studio-server.jar')).find(p => exists(p));
   if (!jar) {
     throw new Error('Fornax Studio\'s server is not built. Run `npm run server:build` (it builds fornax-studio-server in the Fornax checkout at FORNAX_HOME), or set FORNAX_STUDIO_JAR.');
@@ -58,7 +58,9 @@ function backendCommand({ env = process.env, roots, port, parentPid, exists = fs
     // Headless: the server makes images with java.desktop's ImageIO, and on macOS a JVM that starts AWT otherwise shows
     // in the Dock as an app of its own.
     args: ['--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=true', `-Dfornax.library.path=${libraries}`, '-jar', jar],
-    env: { GGML_VK_MAX_NODES_PER_SUBMIT: '8', ...env, FORNAX_STUDIO_PORT: String(port), FORNAX_STUDIO_PARENT_PID: String(parentPid) },
+    // The launch's secret goes in the environment, not on the command line, where ps would show it to any user.
+    env: { GGML_VK_MAX_NODES_PER_SUBMIT: '8', ...env, FORNAX_STUDIO_PORT: String(port), FORNAX_STUDIO_PARENT_PID: String(parentPid),
+      ...(secret ? { FORNAX_STUDIO_SECRET: secret } : {}) },
   };
 }
 

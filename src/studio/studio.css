@@ -160,3 +160,8 @@ html, body { height: 100%; margin: 0; }
 [data-look="windows"] .desk-titlebar > .desk-popover-anchor:has(> .desk-window-info) {
   margin-left: 0;
 }
+
+/* Getting a model: the sheet before a download, and the token for a gated repo. */
+.studio-get-sheet { display: flex; flex-direction: column; gap: var(--desk-space-3); max-width: 36rem; }
+.studio-get-token { display: flex; flex-direction: column; gap: var(--desk-space-2); }
+.studio-get-token-actions { display: flex; gap: var(--desk-space-2); }
