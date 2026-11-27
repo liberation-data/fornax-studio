@@ -8,9 +8,9 @@ name: macOS signed build
 # tags). The signing job below declares `environment: apple-signing`, so the secrets are only ever exposed to that job
 # and only on those refs. The backend job sees only KILN_DEPLOY_KEY, to read the Fornax repository.
 #
-# PER-ARCH, NOT UNIVERSAL. The engines' .dylib files and the jlink'd Java runtime are built for one architecture each,
-# on a runner of that architecture; a universal (lipo) app would need both merged file by file. So arm64 and x64 are
-# built, signed and notarized separately, each on its own runner.
+# APPLE SILICON ONLY. Intel Macs aren't supported (fornax#123): the app, its engines' .dylib files and the jlink'd Java
+# runtime are arm64, built on an arm64 runner. The matrix below keeps one leg, so an architecture could come back as a
+# second one.
 #
 # WHAT GETS SIGNED. electron-builder signs every Mach-O file inside the .app, which takes in what extraResources puts
 # in Contents/Resources/server: jre/bin/java, the JVM's own dylibs, and the engines' libraries, all with the hardened
@@ -18,10 +18,10 @@ name: macOS signed build
 # make sure of it, and that the signed java runs.
 
 on:
-  # By hand: builds, signs and notarizes both architectures and keeps them as the run's artifacts. Nothing is attached
+  # By hand: builds, signs and notarizes the app and keeps it as the run's artifacts. Nothing is attached
   # to a release.
   workflow_dispatch:
-  # On a published GitHub Release: the same build, from the release's tag, with the dmg and zip for each architecture
+  # On a published GitHub Release: the same build, from the release's tag, with the dmg and zip
   # attached to the release. The tag must match v*, as the `apple-signing` environment allows only main and v* tags.
   release:
     types: [published]
@@ -42,11 +42,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Arch-matched runners: macos-15 is Apple silicon, macos-15-intel is the Intel image.
+          # macos-15 is Apple silicon.
           - arch: arm64
             runner: macos-15
-          - arch: x64
-            runner: macos-15-intel
     uses: ./.github/workflows/fornax-backend.yml
     with:
       runner: ${{ matrix.runner }}
@@ -66,14 +64,11 @@ jobs:
       group: macos-signed-${{ github.event.release.tag_name || github.ref }}-${{ matrix.arch }}
       cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
     strategy:
-      # Keep both legs running so one arch's failure still yields the other's logs.
       fail-fast: false
       matrix:
         include:
           - arch: arm64
             runner: macos-15
-          - arch: x64
-            runner: macos-15-intel
 
     steps:
       - name: Checkout
@@ -200,8 +195,8 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"
 
-  # Attach both architectures' dmg and zip to the release. A job of its own, so the token that may write to the repo
-  # never shares a job with npm, the build or the Apple secrets. Runs on a published release only, once both legs pass.
+  # Attach the dmg and zip to the release. A job of its own, so the token that may write to the repo
+  # never shares a job with npm, the build or the Apple secrets. Runs on a published release only, once the build passes.
   attach:
     name: Attach to the release
     needs: build-signed

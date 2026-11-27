@@ -138,7 +138,7 @@ GitHub Actions builds what a release ships, from the Fornax commit in `fornax.re
   checks that all four libraries are there and that the backend starts on it.
 - `linux-build.yml`: a `.deb` and an `.rpm`, x64, Vulkan. They depend on the Vulkan loader, a Vulkan driver (Mesa's,
   unless NVIDIA's is already there) and OpenMP, so `dnf` or `apt` installs whatever is missing.
-- `macos-signed.yml`: a `.dmg` and a `.zip` for Apple silicon and for Intel, Metal, signed with a Developer ID and
+- `macos-signed.yml`: a `.dmg` and a `.zip` for Apple silicon (Intel Macs aren't supported), Metal, signed with a Developer ID and
   notarized, in the `apple-signing` environment.
 
 By hand (Actions, Run workflow) they keep what they built as the run's artifacts; on a published release (a `v*` tag)
