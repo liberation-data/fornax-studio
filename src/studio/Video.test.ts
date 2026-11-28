@@ -29,6 +29,9 @@ describe('video form', () => {
     expect(longClip({ frames: 313, width: 672, height: 448, twoStage: true })).toBe(true)
     expect(longClip({ frames: 49, width: 672, height: 448, twoStage: true })).toBe(false)
     expect(longClip({ frames: 313, width: 336, height: 224, twoStage: true })).toBe(false)
+    expect(longClip({ frames: 241, width: 672, height: 448, twoStage: true })).toBe(false)
+    expect(longClip({ frames: 257, width: 672, height: 448, twoStage: true })).toBe(true)
+    expect(longClip({ frames: 257, width: 1344, height: 896, twoStage: false })).toBe(true)
   })
 
   it('doubles the size for two-stage', () => {

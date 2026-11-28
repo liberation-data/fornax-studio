@@ -35,13 +35,13 @@ interface VideoForm {
 export const framesAllowed = (n: number) => Number.isInteger(n) && n >= 9 && n % 8 === 1
 
 /**
- * Past this many frames, a full-size refine can run a single GPU dispatch longer than the amdgpu driver allows on
- * Vulkan (the device is lost). ROCm and CUDA builds don't have that limit.
+ * Past this many video tokens (32×32 pixels by 8 frames each, at the clip's size), Vulkan's output comes out as haze
+ * (fornax#112): 1344×896 at 241 frames is the most checked clean, 257 frames is wrong. HIP builds don't have the fault.
  */
-export const LONG_CLIP_FRAMES = 121
+export const LONG_CLIP_TOKENS = 42 * 28 * 31
 export const longClip = (form: { frames: number; width: number; height: number; twoStage: boolean }) => {
   const size = clipSize(form)
-  return form.frames > LONG_CLIP_FRAMES && size.width * size.height >= 1024 * 576
+  return Math.ceil(size.width / 32) * Math.ceil(size.height / 32) * (Math.floor((form.frames - 1) / 8) + 1) > LONG_CLIP_TOKENS
 }
 
 /** The clip's size: two-stage refines the draft at twice its size. */
@@ -192,7 +192,7 @@ export function VideoWindow() {
         <TextField label="Frames" type="number" step={8} min={9} value={frames} onChange={e => setFrames(Number(e.target.value))} disabled={busy}
           help={!framesAllowed(frames) ? 'Frames are 8n + 1: 49, 97, 121…'
             : `${seconds(frames / Math.max(1, fps))} at ${fps} fps` + (longClip({ frames, width, height, twoStage })
-              ? '. A clip this long at this size can lose the GPU on a Vulkan build; on AMD, a ROCm build handles it, and faster.'
+              ? '. A clip this long at this size comes out as haze on a Vulkan build; on AMD, a ROCm build handles it, and faster.'
               : '')} />
         <TextField label="FPS" type="number" min={1} max={60} value={fps} onChange={e => setFps(Number(e.target.value))} disabled={busy} />
       </div>
