@@ -104,7 +104,6 @@ export function parseSchema(text: string): { schema: Record<string, unknown> | n
   }
 }
 
-/** The request the form makes, as the backend's /api/inspect takes it: the schema only when there is one. */
 /**
  * The prompt a model is asked when the window's is left empty: its preset's own (OCRia-1, which is trained to transcribe
  * the page), or null when it has none and needs one.
@@ -114,6 +113,7 @@ export function ownPrompt(model: Pick<Model, 'defaults'> | null): string | null 
   return typeof own === 'string' && own.trim() ? own : null
 }
 
+/** The request the form makes, as the backend's /api/inspect takes it: the schema only when there is one. */
 export function inspectRequest(model: string, form: { image: string; prompt: string; schema: Record<string, unknown> | null }) {
   return { model, image: form.image, prompt: form.prompt.trim(), ...(form.schema ? { schema: form.schema } : {}) }
 }

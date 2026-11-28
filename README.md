@@ -24,8 +24,9 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
   its terms accepted on Hugging Face and a read token: the app keeps the token in the system's keychain and gives it to
   the backend, never to the page (with no keychain, or in a browser, set `HF_TOKEN` instead).
 - **Chat**: a conversation streamed token by token, with tokens per second, time to the first token and token counts.
-  **Thinking** shows Qwen3's reasoning (off sends Qwen3's `/no_think`). **Tools** offers the model a clock and a
-  calculator through `LlamaModel.chatJson`: each call it makes is run by the backend and its answer handed back.
+  **Thinking** shows the model's reasoning (off asks it to answer without, where its chat template can). **Tools**
+  offers the model a clock and a calculator through `LlamaModel.chatJson`: each call it makes is run by the backend and
+  its answer handed back.
 - **Image**: a prompt, size, steps, guidance and seed in; the image out, with the steps as they go and their timings.
 - **Song**: a style, lyrics, length, BPM and key in; a 48 kHz song out, played in the window, with the time it took and
   the request as the engine resolved it. Two engines: ACE-Step 1.5, and YuE2 (style, lyrics and length only; it also
@@ -38,10 +39,11 @@ same way: Next.js and Electron, on the [desk](https://www.npmjs.com/package/@lib
   the .mp4.
 - **Inspect**: an image (dropped on, chosen, or one of the samples) and a prompt in; a vision model's answer out,
   streamed with tokens per second, as free text or as JSON held to a schema (`LlamaModel.chatJson` with images, through
-  llama.cpp's mtmd). Three models: Qwen3-VL 4B (the default), PaddleOCR-VL 1.6 and MedGemma 1.5 4B. Three presets fill
-  the prompt and schema: **Read an invoice** (vendor, number, date, line items and totals, shown as JSON and as tables),
-  **Find defects** (boxes as JSON, drawn over the image) and **Describe for review** (free text, with MedGemma: an aid
-  for a clinician's review, not a diagnosis). PaddleOCR-VL takes task prompts (`OCR:`); given a schema, it reads the
+  llama.cpp's mtmd). Four models: Qwen3-VL 4B (the default), PaddleOCR-VL 1.6, MedGemma 1.5 4B and OCRia-1, which
+  transcribes a page to markdown (leave the prompt empty for its own). Three presets fill the prompt and schema:
+  **Read an invoice** (vendor, number, date, line items and totals, shown as JSON and as tables), **Find defects**
+  (boxes as JSON, drawn over the image) and **Describe for review** (free text, with MedGemma: an aid for a clinician's
+  review, not a diagnosis). PaddleOCR-VL takes task prompts (`OCR:`); given a schema, it reads the
   text and Qwen3-VL fills the schema from it. The samples are in `public/samples` (see its `NOTICE.md`): the invoice and
   the tray are drawn by `scripts/DrawSamples.java`, with made-up data; the chest X-ray is CC0, from Wikimedia Commons.
   MedGemma's weights are under Google's Health AI Developer Foundations terms, which the window says when it is chosen.
