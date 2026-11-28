@@ -5,7 +5,7 @@ import type { Column } from '@liberation-data/desk/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { InspectDone, LoadStatus } from './api'
 import { bytes, rate, seconds } from './format'
-import { PRESETS, SAMPLES, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema, readOf } from './inspectPresets'
+import { PRESETS, SAMPLES, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, ownPrompt, parseSchema, readOf } from './inspectPresets'
 import type { Box, Preset, PresetId, Read } from './inspectPresets'
 import { Figures, LicenseNote, ModelPicker, StubNotice, TextArea } from './parts'
 import { postStream } from './sse'
@@ -136,6 +136,7 @@ export function InspectWindow() {
   useEffect(() => () => abort.current?.abort(), [])
 
   const ocr = model?.defaults.ocr === true
+  const own = ownPrompt(model)
   const { schema, problem: schemaProblem } = parseSchema(schemaText)
   const current = PRESETS.find(p => p.id === preset)
 
@@ -281,14 +282,15 @@ export function InspectWindow() {
         </div>
       </div>
       <TextArea label="Prompt" rows={4} value={prompt} onChange={e => setPrompt(e.target.value)} disabled={busy}
-        help={ocr ? 'PaddleOCR-VL takes a task prompt (OCR:, Table Recognition:…). With a schema, it reads the text and Qwen3-VL fills the schema from it.' : undefined} />
+        help={ocr ? 'PaddleOCR-VL takes a task prompt (OCR:, Table Recognition:…). With a schema, it reads the text and Qwen3-VL fills the schema from it.'
+          : own ? `${model?.name ?? 'This model'} transcribes a page to markdown, with its thinking off. Leave the prompt empty to ask it “${own}”` : undefined} />
       <Disclosure label="JSON schema" open={schemaOpen} onOpenChange={setSchemaOpen}
         summary={<span className="desk-text-small desk-text-muted">{schema ? 'the reply is held to it' : 'none: free text'}</span>}>
         <TextArea label="Schema" rows={10} value={schemaText} onChange={e => setSchemaText(e.target.value)} disabled={busy} spellCheck={false}
           className="desk-input studio-textarea studio-mono" help={schemaProblem ?? 'Leave it empty for a free-text answer.'} />
       </Disclosure>
       <div className="studio-actions">
-        <Button intent="default" disabled={!model || !picture || busy || (!prompt.trim() && !ocr) || !!schemaProblem} onClick={() => void inspect()}>
+        <Button intent="default" disabled={!model || !picture || busy || (!prompt.trim() && !ocr && !own) || !!schemaProblem} onClick={() => void inspect()}>
           {busy ? 'Inspecting…' : 'Inspect'}
         </Button>
         {busy && <Button intent="quiet" onClick={() => abort.current?.abort()}>Stop</Button>}

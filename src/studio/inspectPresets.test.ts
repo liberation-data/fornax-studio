@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Model } from './api'
 import { Prose } from './Inspect'
-import { PRESETS, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, parseSchema, readOf } from './inspectPresets'
+import { PRESETS, cell, contain, fieldsOf, findBoxes, humanize, inspectPhase, inspectRequest, ownPrompt, parseSchema, readOf } from './inspectPresets'
 import { defaultModel } from './state'
 
 describe('presets', () => {
@@ -90,6 +90,16 @@ describe('the vision model chosen first', () => {
     expect(defaultModel(models, 'vision')?.id).toBe('vision:qwen3-vl-4b')
     expect(defaultModel(models, 'vision', 'vision:medgemma-4b')?.id).toBe('vision:medgemma-4b')
     expect(defaultModel(models.slice(1), 'vision')?.id).toBe('vision:paddleocr-vl')
+  })
+})
+
+describe('a prompt left empty', () => {
+  const withDefaults = (defaults: Record<string, number | string | boolean>) => ({ defaults }) as unknown as Model
+  it('is the model\'s own where it has one (OCRia-1), and wanted otherwise', () => {
+    expect(ownPrompt(withDefaults({ prompt: 'Transcribe this page in markdown.', thinking: false }))).toBe('Transcribe this page in markdown.')
+    expect(ownPrompt(withDefaults({ maxTokens: 1024 }))).toBeNull()
+    expect(ownPrompt(withDefaults({ prompt: ' ' }))).toBeNull()
+    expect(ownPrompt(null)).toBeNull()
   })
 })
 
