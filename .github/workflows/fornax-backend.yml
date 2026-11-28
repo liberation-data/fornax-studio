@@ -73,12 +73,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
-          # Gradle's plugins and dependencies from the last run, so a build doesn't fetch them all from the Plugin Portal
-          # and Maven Central each time; both have refused GitHub's runners (rate limits, a plugin briefly not found).
-          cache: gradle
-          cache-dependency-path: |
-            fornax/**/*.gradle*
-            fornax/gradle/wrapper/gradle-wrapper.properties
+
+      # Gradle's plugins and dependencies from earlier runs, so a build doesn't fetch them all from the Plugin Portal and
+      # Maven Central; both have refused GitHub's runners (a plugin "not found", HTTP 429). setup-gradle restores the
+      # closest cache even when the build files changed, where setup-java's cache: gradle needs an exact match and so
+      # missed on every Fornax bump (as in fornax#90).
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Install build tools (Linux)
         if: runner.os == 'Linux'
