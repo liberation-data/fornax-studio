@@ -101,8 +101,8 @@ function Conversation({ mode, think }: { mode: Mode; think: boolean }) {
       await postStream(mode === 'chat' ? '/api/chat' : '/api/chat/tools', {
         model: model.id,
         messages: mode === 'tools' ? [{ role: 'system', content: TOOLS_SYSTEM }, ...history(sent)] : history(sent),
-        // Off adds Qwen3's /no_think switch, which only Qwen3 knows; any other model is left to itself.
-        think: think || !/qwen3/i.test(model.id),
+        // Off asks the model to answer without reasoning, where its chat template can turn that off; others ignore it.
+        think,
         maxTokens: 1024,
         temperature: 0.7,
       }, e => {

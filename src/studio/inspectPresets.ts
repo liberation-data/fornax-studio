@@ -1,6 +1,6 @@
 /** The Inspect window's presets, and how it reads what a vision model answers: fields to tabulate, boxes to draw. */
 
-import type { LoadStatus } from './api'
+import type { LoadStatus, Model } from './api'
 import { rate } from './format'
 
 export type PresetId = 'invoice' | 'defects' | 'review'
@@ -102,6 +102,15 @@ export function parseSchema(text: string): { schema: Record<string, unknown> | n
   } catch (e) {
     return { schema: null, problem: `The schema isn’t JSON: ${e instanceof Error ? e.message : String(e)}` }
   }
+}
+
+/**
+ * The prompt a model is asked when the window's is left empty: its preset's own (OCRia-1, which is trained to transcribe
+ * the page), or null when it has none and needs one.
+ */
+export function ownPrompt(model: Pick<Model, 'defaults'> | null): string | null {
+  const own = model?.defaults.prompt
+  return typeof own === 'string' && own.trim() ? own : null
 }
 
 /** The request the form makes, as the backend's /api/inspect takes it: the schema only when there is one. */

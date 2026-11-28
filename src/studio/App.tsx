@@ -36,7 +36,7 @@ function infoOf(id: string): ReactNode {
   if (id === 'image') return 'stable-diffusion.cpp through Fornax’s DiffusionModel: FLUX.2 [klein] and Qwen-Image. Each step is reported as it finishes.'
   if (id === 'song') return 'ACE-Step 1.5 through Fornax’s AceStepModel, or YuE2 through its Yue2Model: a style and lyrics in, a 48 kHz stereo song out. YuE2’s weights are CC BY-NC 4.0: no commercial use.'
   if (id === 'video') return 'LTX-2.5 through Fornax’s DiffusionModel.generateVideo, with the two-stage recipe: a draft, the x2 latent upscaler, then a refine. Picture and sound are made together; ffmpeg makes the .mp4.'
-  if (id === 'inspect') return 'A vision language model through Fornax’s LlamaModel, with its mmproj, on llama.cpp’s mtmd: Qwen3-VL, PaddleOCR-VL or MedGemma. An image and a prompt in; an answer out, streamed, as text or as JSON held to a schema with LlamaModel.chatJson.'
+  if (id === 'inspect') return 'A vision language model through Fornax’s LlamaModel, with its mmproj, on llama.cpp’s mtmd: Qwen3-VL, PaddleOCR-VL, MedGemma or OCRia-1. An image and a prompt in; an answer out, streamed, as text or as JSON held to a schema with LlamaModel.chatJson.'
   return null
 }
 
